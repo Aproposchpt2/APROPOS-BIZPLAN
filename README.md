@@ -9,6 +9,7 @@ The first wedge of the Apropos Online SBDC: a person answers a few questions and
 - `netlify/functions/generate-plan.js` — turns the intake into a 10-section business plan.
   - **With `ANTHROPIC_API_KEY` set** → a genuinely AI-tailored plan (model via `PLAN_MODEL`, default `claude-sonnet-4-6`).
   - **Without it** → a solid "starter plan" assembled from the owner's inputs, so the flow works immediately.
+- `netlify/functions/assistant.js` — the **personal AI Business Assistant**: a 24/7 chat advisor that auto-primes with the user's generated plan. With `ANTHROPIC_API_KEY` it's a live advisor (model via `ASSISTANT_MODEL`); without it, an honest helpful fallback so the chat never breaks. This is the SBDC's #1 service (1-on-1 counseling) democratized — no waitlist, knows your business, scales to the masses.
 
 ## To finish wiring (the two things only you can set)
 1. **Turn on AI tailoring** — add `ANTHROPIC_API_KEY` in Netlify env (and optionally `PLAN_MODEL`). Until then it serves the starter plan.

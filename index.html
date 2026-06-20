@@ -99,6 +99,22 @@
   .how h4{font-size:1.02rem;margin-bottom:5px}
   .how p{font-size:.9rem;color:var(--ink-2)}
 
+  .assistant{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 22px 56px rgba(16,36,28,.07);padding:30px;scroll-margin-top:80px}
+  .assistant .hd{display:flex;align-items:center;gap:13px;margin-bottom:4px}
+  .assistant .av{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green-dk));color:#fff;display:grid;place-items:center;font-family:var(--disp);font-weight:700;font-size:1.1rem}
+  .assistant h2{font-family:var(--disp);font-weight:600;font-size:1.5rem}
+  .assistant .status{font-size:.78rem;color:var(--green);font-weight:500}
+  .chat{border:1px solid var(--line);border-radius:14px;background:var(--paper);height:360px;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px;margin:16px 0}
+  .msg{max-width:85%;padding:11px 15px;border-radius:14px;font-size:.95rem;line-height:1.55;word-wrap:break-word}
+  .msg.user{align-self:flex-end;background:var(--green);color:#fff;border-bottom-right-radius:4px}
+  .msg.bot{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px}
+  .msg.bot strong{color:var(--green-dk)}
+  .chatform{display:flex;gap:10px}
+  .chatform input{flex:1}
+  .suggest{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 2px}
+  .suggest button{font-size:.82rem;background:var(--green-soft);border:1px solid var(--line);color:var(--green-dk);border-radius:999px;padding:7px 13px;cursor:pointer;font-family:var(--body)}
+  .suggest button:hover{background:#d6e8dd}
+
   footer{border-top:1px solid var(--line);padding:28px 0;text-align:center;color:var(--ink-2);font-size:.82rem}
 
   @media(max-width:720px){.grid,.ccards,.how{grid-template-columns:1fr}.panel{padding:24px}.plan{padding:22px}}
@@ -123,7 +139,10 @@
       <div class="them">The old way: sign up → sit through a seminar → a blank template</div>
       <div class="us">Here: your plan, written for your business</div>
     </div>
-    <div style="margin-top:26px"><a href="#start" class="btn btn-primary">Build my business plan →</a></div>
+    <div style="margin-top:26px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <a href="#start" class="btn btn-primary">Build my business plan →</a>
+      <a href="#assistant" class="btn btn-ghost">Meet your AI assistant →</a>
+    </div>
   </div>
 </section>
 
@@ -166,6 +185,28 @@
       <div class="s"><div class="n">01</div><h4>Tell us your situation</h4><p>A few quick questions about your idea. No account, nothing stored.</p></div>
       <div class="s"><div class="n">02</div><h4>Get your tailored plan</h4><p>A real, written business plan for your business — not a blank template.</p></div>
       <div class="s"><div class="n">03</div><h4>Build it with CapGen</h4><p>Turn the plan into a brand, a website, content, and contracts — done with you.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="assistant">
+  <div class="wrap">
+    <div class="assistant">
+      <div class="hd">
+        <div class="av">A</div>
+        <div><h2>Your AI Business Assistant</h2><div class="status" id="asstStatus">Available 24/7 · no waitlist · in your corner</div></div>
+      </div>
+      <div class="suggest" id="suggest">
+        <button data-q="How do I get my first 5 customers?">How do I get my first customers?</button>
+        <button data-q="What licenses and registrations do I need to start a business?">What do I need to register?</button>
+        <button data-q="How do I find government contracts my business can win?">How do I find contracts?</button>
+        <button data-q="How should I price my product or service?">How do I price it?</button>
+      </div>
+      <div class="chat" id="chat"></div>
+      <form class="chatform" id="chatForm">
+        <input id="chatInput" placeholder="Ask your assistant anything about your business…" autocomplete="off">
+        <button class="btn btn-primary" type="submit">Send</button>
+      </form>
     </div>
   </div>
 </section>
@@ -238,11 +279,43 @@ function render(d){
     </div>
     <div class="disc">${d.disclaimer}</div>
     <div class="again">
+      <a class="btn btn-primary" href="#assistant">💬 Ask your AI assistant about this plan</a>
       <a class="btn btn-ghost" href="#" onclick="window.print();return false;">⎙ Save / print my plan</a>
       <a class="btn btn-ghost" href="#" onclick="location.reload();return false;">↺ Start over</a>
     </div>`;
   $('results').style.display='block';
   $('results').scrollIntoView({behavior:'smooth'});
+  primeAssistant(d);
+}
+// ---- AI Business Assistant ----
+function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function mdInline(s){return escapeHtml(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');}
+let convo=[]; let asstContext='';
+const chatEl=$('chat');
+function addMsg(role,text){
+  const div=document.createElement('div');
+  div.className='msg '+(role==='user'?'user':'bot');
+  div.innerHTML = role==='user'?escapeHtml(text):mdInline(text);
+  chatEl.appendChild(div); chatEl.scrollTop=chatEl.scrollHeight; return div;
+}
+addMsg('bot',"Hi — I'm your Apropos Business Assistant. Ask me anything about starting, building, or growing your business. What's on your mind?");
+async function sendMsg(text){
+  text=(text||'').trim(); if(!text)return;
+  addMsg('user',text); convo.push({role:'user',content:text});
+  const typing=addMsg('bot','…');
+  try{
+    const r=await fetch('/.netlify/functions/assistant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:convo,context:asstContext})});
+    const d=await r.json(); const reply=d.reply||'…';
+    typing.innerHTML=mdInline(reply); convo.push({role:'assistant',content:reply});
+  }catch(e){ typing.textContent='Sorry — try again in a moment.'; }
+  chatEl.scrollTop=chatEl.scrollHeight;
+}
+$('chatForm').addEventListener('submit',e=>{e.preventDefault();const v=$('chatInput').value;$('chatInput').value='';sendMsg(v);});
+$('suggest').addEventListener('click',e=>{const b=e.target.closest('button');if(b)sendMsg(b.getAttribute('data-q'));});
+function primeAssistant(d){
+  asstContext = d.businessName + '. Plan summary: ' + String(d.plan).slice(0,1600);
+  $('asstStatus').textContent = 'Primed with your plan for ' + d.businessName;
+  addMsg('bot',"I've got your plan for **"+d.businessName+"** in front of me. Ask me how to put it into action — pricing, first customers, your launch checklist, anything.");
 }
 </script>
 </body>
