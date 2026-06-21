@@ -38,6 +38,18 @@
   .lede{font-size:clamp(1.04rem,1.8vw,1.24rem);color:var(--ink-2);max-width:600px;margin:0 auto 26px;font-weight:300}
   .creed{font-family:var(--disp);font-weight:600;font-size:clamp(1.25rem,2.6vw,1.7rem);color:var(--ink);margin:0 auto 20px;letter-spacing:-.01em}
   .creed em{font-style:italic;color:var(--green)}
+  .manifesto{background:var(--ink);color:#e9f2ed;padding:62px 0}
+  .manifesto .eyebrow2{font-size:.68rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:14px;text-align:center}
+  .manifesto h2{font-family:var(--disp);font-weight:600;font-size:clamp(1.7rem,3.7vw,2.6rem);line-height:1.12;text-align:center;color:#fff;max-width:840px;margin:0 auto 18px}
+  .manifesto h2 em{font-style:italic;color:#7fd0a6}
+  .manifesto .stmt{max-width:760px;margin:0 auto 40px;text-align:center;color:#c5d6cc;font-size:1.05rem;line-height:1.75;font-weight:300}
+  .manifesto .stmt b{color:#fff;font-weight:600}
+  .www{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:1000px;margin:0 auto}
+  .www .col{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:24px}
+  .www .k{font-family:var(--disp);font-weight:700;font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+  .www h3{font-family:var(--disp);font-weight:600;font-size:1.22rem;color:#fff;margin-bottom:8px}
+  .www p{font-size:.95rem;color:#c5d6cc;line-height:1.65;font-weight:300}
+  @media(max-width:760px){.www{grid-template-columns:1fr}}
   .contrast{display:inline-flex;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:.9rem;margin-top:6px}
   .contrast div{padding:11px 18px}
   .contrast .them{background:#fff;color:var(--ink-2)}
@@ -154,6 +166,19 @@
     <div style="margin-top:26px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
       <a href="#start" class="btn btn-primary">Build my business plan →</a>
       <a href="#assistant" class="btn btn-ghost">Meet your AI assistant →</a>
+    </div>
+  </div>
+</section>
+
+<section class="manifesto">
+  <div class="wrap">
+    <div class="eyebrow2">Why I built this</div>
+    <h2>What the government-funded business development center won't do — <em>we will.</em></h2>
+    <p class="stmt">Too many programs put on the costume of <b>help</b> — funded by taxpayer dollars, measured by sign-ups and seminars, and never truly dedicated to delivering on the promise. I didn't build Apropos to look the part. I built it to do the work — a <b>self-funded federal contractor and licensed Nevada corporation</b>, accountable to you, not to a budget line, built to run circles around any program funded to look busy.</p>
+    <div class="www">
+      <div class="col"><div class="k">What we do</div><h3>Deliver, not refer</h3><p>No classes, no blank templates, no "go see another office." Your plan written, your documents drafted, your brand and website built, your contracts found — real deliverables you walk away with today.</p></div>
+      <div class="col"><div class="k">Why we do it</div><h3>The promise, kept</h3><p>Because watching "business help" go undelivered — on the public's dime — is exactly why this had to exist. We earn our keep only when you get a result. No grant. No costume. No excuses.</p></div>
+      <div class="col"><div class="k">How we do it</div><h3>Tools built to win</h3><p>A registered federal contractor and licensed Nevada corporation, armed with the same AI tools and government-contract intelligence we built to win real work — put in your hands, online, 24/7. Outcomes, not activity.</p></div>
     </div>
   </div>
 </section>
