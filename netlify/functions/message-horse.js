@@ -14,13 +14,13 @@ const MODEL = process.env.MESSAGE_MODEL || 'claude-sonnet-4-6';
 const SITE = 'https://aibizcenter.aproposgroupllc.com';
 
 const THEMES = [
-  { key: 'business-center', brief: 'The Apropos Business Center is a real, online, full-service business center that DOES the work instead of advising — it hands you the finished plan, documents, website, and the contracts. The whole business journey, start to grow, in one place.' },
-  { key: 'contrast',        brief: "What a government-funded business development center won't do — Apropos does. No costume, no smoke and mirrors: a self-funded federal contractor and licensed Nevada corporation, built to deliver real results, not host another class." },
-  { key: 'contracts',       brief: 'Stop scrolling through endless pages of open and closed government contracts. StateGen brings the contracts to YOU — matched to your business, ranked, and ready to bid (Nevada and California live now).' },
-  { key: 'capgen',          brief: 'CapGen builds your brand, your website, your content, and your proposals FOR you — not a blank template, the finished thing. The creation work, done.' },
-  { key: 'opportunity',     brief: 'We provide opportunity — the kind that leads to success. Find the money and programs you actually qualify for, matched to your situation, in minutes.' },
-  { key: 'documents',       brief: 'Need an NDA, an LLC operating agreement, a service contract, or a clean invoice? Generate a real, ready-to-use business document in minutes — drafted for your business.' },
-  { key: 'free',            brief: 'Start FREE. Your tailored business plan, your business documents, and a 24/7 AI business assistant — free. We earn your business by delivering, not by charging at the door.' },
+  { key: 'business-center', url: 'https://aibizcenter.aproposgroupllc.com',            brief: 'The Apropos Business Center is a real, online, full-service business center that DOES the work instead of advising — it hands you the finished plan, documents, website, and the contracts. The whole business journey, start to grow, in one place.' },
+  { key: 'contrast',        url: 'https://aibizcenter.aproposgroupllc.com',            brief: "What a government-funded business development center won't do — Apropos does. No costume, no smoke and mirrors: a self-funded federal contractor and licensed Nevada corporation, built to deliver real results, not host another class." },
+  { key: 'contracts',       url: 'https://nevadastategen.aproposgroupllc.com',         brief: 'Stop scrolling through endless pages of open and closed government contracts. StateGen brings the contracts to YOU — matched to your business, ranked, and ready to bid (Nevada and California live now).' },
+  { key: 'capgen',          url: 'https://capgen.aproposgroupllc.com',                 brief: 'CapGen builds your brand, your website, your content, and your proposals FOR you — not a blank template, the finished thing. The creation work, done.' },
+  { key: 'opportunity',     url: 'https://aibizcenter.aproposgroupllc.com',            brief: 'We provide opportunity — the kind that leads to success. Find the money and programs you actually qualify for, matched to your situation, in minutes.' },
+  { key: 'documents',       url: 'https://aibizcenter.aproposgroupllc.com/#documents', brief: 'Need an NDA, an LLC operating agreement, a service contract, or a clean invoice? Generate a real, ready-to-use business document in minutes — drafted for your business.' },
+  { key: 'free',            url: 'https://aibizcenter.aproposgroupllc.com/#start',     brief: 'Start FREE. Your tailored business plan, your business documents, and a 24/7 AI business assistant — free. We earn your business by delivering, not by charging at the door.' },
 ];
 
 function pickTheme() {
@@ -30,8 +30,9 @@ function pickTheme() {
 }
 
 async function generateMessage(theme) {
+  const link = theme.url || SITE;
   if (!process.env.ANTHROPIC_API_KEY) {
-    return `${theme.brief}\n\nStart free at ${SITE}`;
+    return `${theme.brief}\n\nStart free at ${link}`;
   }
   const prompt = `You write the daily Facebook post for the Apropos Business Center (an online full-service business center built by Apropos Group LLC — a self-funded federal contractor and licensed Nevada corporation).
 
@@ -42,7 +43,7 @@ Today's angle: ${theme.brief}
 Write ONE Facebook post:
 - A strong first-line hook that stops the scroll.
 - 1–3 short paragraphs of real value (what it does FOR them, not buzzwords).
-- A clear call to action ending with the link ${SITE}
+- A clear call to action ending with the link ${link}
 - At most 1–2 relevant hashtags (or none). No emoji spam — one or two at most, only if natural.
 - Do NOT name or attack any specific organization. Critique the "all talk, no delivery" model in general if relevant.
 - Output ONLY the post text, ready to publish. No preamble, no quotes around it.`;
@@ -55,7 +56,7 @@ Write ONE Facebook post:
   const data = await r.json();
   if (!r.ok) throw new Error(data?.error?.message || 'AI generation failed');
   const text = (data.content || []).map(c => c.text || '').join('').trim();
-  return text || `${theme.brief}\n\nStart free at ${SITE}`;
+  return text || `${theme.brief}\n\nStart free at ${link}`;
 }
 
 // A system-user token isn't a page token. Resolve the page's OWN access token
@@ -131,7 +132,7 @@ export default async () => {
   const theme = pickTheme();
   let message;
   try { message = await generateMessage(theme); }
-  catch (e) { message = `${theme.brief}\n\nStart free at ${SITE}`; }
+  catch (e) { message = `${theme.brief}\n\nStart free at ${theme.url || SITE}`; }
 
   const result = { ran: new Date().toISOString(), theme: theme.key, mode };
   if (mode === 'post' || mode === 'both') result.facebook = await postToFacebook(message);
