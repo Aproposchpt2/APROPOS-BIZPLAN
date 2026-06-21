@@ -127,16 +127,20 @@ async function emailOwner(message, fb) {
 
 export const config = { schedule: '0 15 * * *' }; // ~8am Pacific daily
 
-export default async () => {
-  const mode = (process.env.MESSAGE_HORSE_MODE || 'email').toLowerCase();
+export default async (req) => {
+  // ?dry=1 → generate + preview the post (and its link) WITHOUT publishing.
+  let dry = false;
+  try { dry = new URL(req.url).searchParams.get('dry') === '1'; } catch (_) {}
+
+  const mode = dry ? 'preview' : (process.env.MESSAGE_HORSE_MODE || 'email').toLowerCase();
   const theme = pickTheme();
   let message;
   try { message = await generateMessage(theme); }
   catch (e) { message = `${theme.brief}\n\nStart free at ${theme.url || SITE}`; }
 
-  const result = { ran: new Date().toISOString(), theme: theme.key, mode };
-  if (mode === 'post' || mode === 'both') result.facebook = await postToFacebook(message);
-  if (mode === 'email' || mode === 'both') result.email = await emailOwner(message, result.facebook);
+  const result = { ran: new Date().toISOString(), theme: theme.key, link: theme.url || SITE, mode };
+  if (!dry && (mode === 'post' || mode === 'both')) result.facebook = await postToFacebook(message);
+  if (!dry && (mode === 'email' || mode === 'both')) result.email = await emailOwner(message, result.facebook);
   result.message = message;
 
   return new Response(JSON.stringify(result, null, 2), { status: 200, headers: { 'Content-Type': 'application/json' } });
