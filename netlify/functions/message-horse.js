@@ -58,15 +58,27 @@ Write ONE Facebook post:
   return text || `${theme.brief}\n\nStart free at ${SITE}`;
 }
 
+// A system-user token isn't a page token. Exchange it for the page's own
+// access token (the canonical, ToS-safe way); fall back to using it directly.
+async function resolvePageToken(token, pageId) {
+  try {
+    const r = await fetch(`${FB_API}/${pageId}?fields=access_token&access_token=${encodeURIComponent(token)}`);
+    const d = await r.json();
+    if (r.ok && d && d.access_token) return d.access_token;
+  } catch (_) {}
+  return token;
+}
+
 async function postToFacebook(message) {
   const pageId = process.env.FB_PAGE_ID || '61573363201770';
   const token = process.env.FB_PAGE_TOKEN;
   if (!token) return { posted: false, reason: 'FB_PAGE_TOKEN not set' };
   try {
+    const pageToken = await resolvePageToken(token, pageId);
     const r = await fetch(`${FB_API}/${pageId}/feed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, access_token: token }),
+      body: JSON.stringify({ message, access_token: pageToken }),
     });
     const d = await r.json();
     if (!r.ok) return { posted: false, error: d?.error?.message || ('HTTP ' + r.status) };
