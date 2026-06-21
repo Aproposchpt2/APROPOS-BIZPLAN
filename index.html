@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Apropos Business Center — Get your tailored business plan, free</title>
-<meta name="description" content="Don't sit through another class. Answer a few questions and get a tailored business plan in minutes — then build it with the CapGen tools. The online business development center that does the work with you.">
+<title>Apropos Business Center — An Online Full-Service Business Center</title>
+<meta name="description" content="An online full-service business center that does the work with you: a tailored business plan, a 24/7 AI business assistant, your brand & website, and help winning customers and contracts — all in one place. Start free.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -58,6 +58,14 @@
   .btn-primary:hover{background:var(--green-dk)}
   .btn-ghost{background:#fff;border-color:var(--line);color:var(--ink)}
   .btn-ghost:hover{border-color:var(--green);color:var(--green)}
+  .svc{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:14px;margin-top:8px}
+  .svc-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px}
+  .svc-card .stage{font-size:.62rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--gold);margin-bottom:9px}
+  .svc-card .ic{width:36px;height:36px;border-radius:9px;background:var(--green-soft);color:var(--green);display:grid;place-items:center;font-weight:700;margin-bottom:12px;font-family:var(--disp);font-size:1.05rem}
+  .svc-card h4{font-size:1.02rem;font-weight:600;margin-bottom:5px}
+  .svc-card p{font-size:.9rem;color:var(--ink-2)}
+  .svc-head{text-align:center;margin-bottom:24px}
+  .svc-head h2{font-family:var(--disp);font-weight:600;font-size:clamp(1.6rem,3vw,2.1rem);margin-top:14px}
   .form-foot{display:flex;align-items:center;gap:16px;margin-top:24px;flex-wrap:wrap}
   .priv{font-size:.8rem;color:var(--ink-2)}
   .err{display:none;background:#fdecec;border:1px solid #f3c2c2;color:#8c2b2b;border-radius:12px;padding:14px 16px;margin-top:16px;font-size:.92rem}
@@ -126,15 +134,15 @@
 <header class="top">
   <div class="wrap">
     <div class="logo"><span class="mk">A</span>Apropos Business Center</div>
-    <div class="by">An Apropos Group company</div>
+    <div class="by">An Online Full-Service Business Center</div>
   </div>
 </header>
 
 <section class="hero">
   <div class="wrap">
-    <span class="kick"><span class="d"></span>Free · Tailored to you · A few minutes</span>
+    <span class="kick"><span class="d"></span>An Online Full-Service Business Center</span>
     <h1>They teach a class about it.<br><em>We hand you the plan.</em></h1>
-    <p class="lede">The online business development center that does the work <em>with</em> you. Answer a few questions and walk away with a tailored business plan — then build it with our tools.</p>
+    <p class="lede">The online business development center that does the work <em>with</em> you — from your first plan to your first contract. Start free with a tailored business plan; the full center is right here when you're ready to build, win, and grow.</p>
     <div class="contrast">
       <div class="them">The old way: sign up → sit through a seminar → a blank template</div>
       <div class="us">Here: your plan, written for your business</div>
@@ -142,6 +150,22 @@
     <div style="margin-top:26px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
       <a href="#start" class="btn btn-primary">Build my business plan →</a>
       <a href="#assistant" class="btn btn-ghost">Meet your AI assistant →</a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="services" style="padding-bottom:18px">
+  <div class="wrap">
+    <div class="svc-head">
+      <span class="kick"><span class="d"></span>One place · Start to grow</span>
+      <h2>Everything a business center should do — online, and done <em style="font-style:italic;color:var(--green)">with</em> you.</h2>
+    </div>
+    <div class="svc">
+      <div class="svc-card"><div class="stage">Start</div><div class="ic">✦</div><h4>Your business plan</h4><p>A tailored, written plan for your business — free, in minutes.</p></div>
+      <div class="svc-card"><div class="stage">Build</div><div class="ic">◧</div><h4>Brand &amp; website</h4><p>Your name, brand, content, and a live site — built with CapGen.</p></div>
+      <div class="svc-card"><div class="stage">Guide</div><div class="ic">A</div><h4>AI Business Assistant</h4><p>A 24/7 advisor that knows your business — no waitlist.</p></div>
+      <div class="svc-card"><div class="stage">Win</div><div class="ic">⎙</div><h4>Customers &amp; contracts</h4><p>Find government contracts and draft the bid — done with you.</p></div>
+      <div class="svc-card"><div class="stage">Grow</div><div class="ic">↗</div><h4>Funding &amp; growth</h4><p>The next move — capital, marketing, and scaling up.</p></div>
     </div>
   </div>
 </section>
