@@ -58,15 +58,31 @@ Write ONE Facebook post:
   return text || `${theme.brief}\n\nStart free at ${SITE}`;
 }
 
-// A system-user token isn't a page token. Exchange it for the page's own
-// access token (the canonical, ToS-safe way); fall back to using it directly.
-async function resolvePageToken(token, pageId) {
+// A system-user token isn't a page token. Resolve the page's OWN access token
+// (the canonical, ToS-safe way for New Pages Experience): try the page node,
+// then /me/accounts (the system user's managed pages). Returns {id, token, diag}.
+async function resolvePageContext(token, pageId) {
+  const diag = {};
+  // 1) Direct page node
   try {
-    const r = await fetch(`${FB_API}/${pageId}?fields=access_token&access_token=${encodeURIComponent(token)}`);
+    const r = await fetch(`${FB_API}/${pageId}?fields=access_token,name&access_token=${encodeURIComponent(token)}`);
     const d = await r.json();
-    if (r.ok && d && d.access_token) return d.access_token;
-  } catch (_) {}
-  return token;
+    diag.direct = r.ok ? (d.access_token ? 'got-token' : 'no-token') : (d?.error?.message || ('HTTP ' + r.status));
+    if (r.ok && d.access_token) return { id: pageId, token: d.access_token, diag };
+  } catch (e) { diag.direct = String(e.message || e); }
+  // 2) /me/accounts — the pages this (system) user manages, each with a page token
+  try {
+    const r = await fetch(`${FB_API}/me/accounts?fields=id,name,access_token&access_token=${encodeURIComponent(token)}`);
+    const d = await r.json();
+    if (r.ok && Array.isArray(d.data)) {
+      diag.accounts = d.data.length;
+      const match = d.data.find(p => p.id === pageId) || d.data[0];
+      if (match && match.access_token) return { id: match.id, token: match.access_token, diag };
+    } else {
+      diag.accounts = d?.error?.message || ('HTTP ' + r.status);
+    }
+  } catch (e) { diag.accounts = String(e.message || e); }
+  return { id: pageId, token, diag };
 }
 
 async function postToFacebook(message) {
@@ -74,15 +90,15 @@ async function postToFacebook(message) {
   const token = process.env.FB_PAGE_TOKEN;
   if (!token) return { posted: false, reason: 'FB_PAGE_TOKEN not set' };
   try {
-    const pageToken = await resolvePageToken(token, pageId);
-    const r = await fetch(`${FB_API}/${pageId}/feed`, {
+    const ctx = await resolvePageContext(token, pageId);
+    const r = await fetch(`${FB_API}/${ctx.id}/feed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, access_token: pageToken }),
+      body: JSON.stringify({ message, access_token: ctx.token }),
     });
     const d = await r.json();
-    if (!r.ok) return { posted: false, error: d?.error?.message || ('HTTP ' + r.status) };
-    return { posted: true, id: d.id };
+    if (!r.ok) return { posted: false, error: d?.error?.message || ('HTTP ' + r.status), diag: ctx.diag };
+    return { posted: true, id: d.id, diag: ctx.diag };
   } catch (e) { return { posted: false, error: String(e.message || e) }; }
 }
 
