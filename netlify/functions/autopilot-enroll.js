@@ -65,31 +65,33 @@ export default async (req) => {
   let token = body.page_token;
   if (token === '@env') token = process.env.FB_PAGE_TOKEN;   // convenience: reuse the in-house token
 
-  if (!body.business_name || !body.page_id) return json({ error: 'business_name and page_id are required' }, 400);
-  if (!body.id && !token) return json({ error: 'page_token (or "@env") is required to enroll' }, 400);
+  // Insert needs the essentials; update (id present) only touches sent fields.
+  if (!body.id) {
+    if (!body.business_name || !body.page_id) return json({ error: 'business_name and page_id are required to enroll' }, 400);
+    if (!token) return json({ error: 'page_token (or "@env") is required to enroll' }, 400);
+  }
 
-  // Validate the token against the page when one is supplied.
+  // Validate the token against the page when both are supplied.
   let verify = null;
-  if (token) {
+  if (token && body.page_id) {
     verify = await verifyPage(token, body.page_id);
     if (!verify.ok) return json({ error: 'token cannot reach that page_id — check the token and page id', verify }, 400);
   }
 
-  const row = {
-    business_name: body.business_name,
-    page_id: body.page_id,
-    about: body.about ?? null,
-    default_link: body.default_link ?? null,
-    tone: body.tone ?? null,
-    owner_email: body.owner_email ?? null,
-    updated_at: new Date().toISOString(),
-  };
-  if (token) row.page_token = token;
-  if (body.themes !== undefined) row.themes = body.themes;
-  if (body.links !== undefined) row.links = body.links;
+  // Only include fields actually provided, so a partial update never nulls the rest.
+  const row = { updated_at: new Date().toISOString() };
+  if (body.business_name !== undefined) row.business_name = body.business_name;
+  if (body.page_id !== undefined)       row.page_id       = body.page_id;
+  if (body.about !== undefined)         row.about         = body.about;
+  if (body.default_link !== undefined)  row.default_link  = body.default_link;
+  if (body.tone !== undefined)          row.tone          = body.tone;
+  if (body.owner_email !== undefined)   row.owner_email   = body.owner_email;
+  if (token)                            row.page_token    = token;
+  if (body.themes !== undefined)        row.themes        = body.themes;
+  if (body.links !== undefined)         row.links         = body.links;
   if (body.post_hour_utc !== undefined) row.post_hour_utc = body.post_hour_utc;
-  if (body.mode !== undefined) row.mode = body.mode;
-  if (body.status !== undefined) row.status = body.status;
+  if (body.mode !== undefined)          row.mode          = body.mode;
+  if (body.status !== undefined)        row.status        = body.status;
 
   try {
     let saved;
