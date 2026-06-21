@@ -59,7 +59,8 @@
   .btn-ghost{background:#fff;border-color:var(--line);color:var(--ink)}
   .btn-ghost:hover{border-color:var(--green);color:var(--green)}
   .svc{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:14px;margin-top:8px}
-  .svc-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px}
+  .svc-card{display:block;text-decoration:none;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;transition:.15s}
+  .svc-card:hover{border-color:var(--green);box-shadow:0 10px 30px rgba(16,36,28,.08);transform:translateY(-2px)}
   .svc-card .stage{font-size:.62rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--gold);margin-bottom:9px}
   .svc-card .ic{width:36px;height:36px;border-radius:9px;background:var(--green-soft);color:var(--green);display:grid;place-items:center;font-weight:700;margin-bottom:12px;font-family:var(--disp);font-size:1.05rem}
   .svc-card h4{font-size:1.02rem;font-weight:600;margin-bottom:5px}
@@ -161,11 +162,12 @@
       <h2>Everything a business center should do — online, and done <em style="font-style:italic;color:var(--green)">with</em> you.</h2>
     </div>
     <div class="svc">
-      <div class="svc-card"><div class="stage">Start</div><div class="ic">✦</div><h4>Your business plan</h4><p>A tailored, written plan for your business — free, in minutes.</p></div>
-      <div class="svc-card"><div class="stage">Build</div><div class="ic">◧</div><h4>Brand &amp; website</h4><p>Your name, brand, content, and a live site — built with CapGen.</p></div>
-      <div class="svc-card"><div class="stage">Guide</div><div class="ic">A</div><h4>AI Business Assistant</h4><p>A 24/7 advisor that knows your business — no waitlist.</p></div>
-      <div class="svc-card"><div class="stage">Win</div><div class="ic">⎙</div><h4>Customers &amp; contracts</h4><p>Find government contracts and draft the bid — done with you.</p></div>
-      <div class="svc-card"><div class="stage">Grow</div><div class="ic">↗</div><h4>Funding &amp; growth</h4><p>The next move — capital, marketing, and scaling up.</p></div>
+      <a class="svc-card" href="#start"><div class="stage">Start</div><div class="ic">✦</div><h4>Your business plan</h4><p>A tailored, written plan for your business — free, in minutes.</p></a>
+      <a class="svc-card" href="#documents"><div class="stage">Run</div><div class="ic">⎘</div><h4>Business documents</h4><p>NDAs, agreements, invoices &amp; more — drafted for you, ready to use.</p></a>
+      <a class="svc-card" href="https://ai4websitedesign.com" target="_blank" rel="noopener"><div class="stage">Build</div><div class="ic">◧</div><h4>Brand &amp; website</h4><p>Your name, brand, content, and a live website — built with you.</p></a>
+      <a class="svc-card" href="#assistant"><div class="stage">Guide</div><div class="ic">A</div><h4>AI Business Assistant</h4><p>A 24/7 advisor that knows your business — no waitlist.</p></a>
+      <a class="svc-card" href="https://nevadastategen.aproposgroupllc.com" target="_blank" rel="noopener"><div class="stage">Win</div><div class="ic">⎙</div><h4>Customers &amp; contracts</h4><p>Find government contracts and draft the bid — done with you.</p></a>
+      <a class="svc-card" href="#assistant"><div class="stage">Grow</div><div class="ic">↗</div><h4>Funding &amp; growth</h4><p>Capital, grants, and the next move — ask your assistant to map it.</p></a>
     </div>
   </div>
 </section>
@@ -210,6 +212,43 @@
       <div class="s"><div class="n">02</div><h4>Get your tailored plan</h4><p>A real, written business plan for your business — not a blank template.</p></div>
       <div class="s"><div class="n">03</div><h4>Build it with CapGen</h4><p>Turn the plan into a brand, a website, content, and contracts — done with you.</p></div>
     </div>
+  </div>
+</section>
+
+<section class="section" id="documents">
+  <div class="wrap">
+    <div class="panel" id="docPanel">
+      <h2>Generate a business document.</h2>
+      <p class="sub">Real, ready-to-use documents — drafted for your business in seconds. Pick one, add a few details, and it's yours.</p>
+      <form id="docForm">
+        <div class="grid">
+          <div class="field full"><label for="docType">Which document?</label>
+            <select id="docType">
+              <option value="nda">Non-Disclosure Agreement (NDA)</option>
+              <option value="operating">LLC Operating Agreement</option>
+              <option value="contractor">Independent Contractor Agreement</option>
+              <option value="service">Service Agreement / Statement of Work</option>
+              <option value="invoice">Professional Invoice</option>
+              <option value="proposal">Business Proposal</option>
+              <option value="privacy">Website Privacy Policy</option>
+              <option value="terms">Website Terms of Service</option>
+              <option value="demand">Demand Letter (unpaid invoice)</option>
+            </select>
+          </div>
+          <div class="field"><label for="docBusiness">Your business name</label><input id="docBusiness" placeholder="e.g. Desert Bloom Cleaning LLC"></div>
+          <div class="field"><label for="docState">State <span class="h">(optional)</span></label><input id="docState" placeholder="e.g. Nevada"></div>
+          <div class="field full"><label for="docParty">Other party <span class="h">(optional)</span></label><input id="docParty" placeholder="e.g. Acme Supplies Inc. — the client, contractor, or counterparty"></div>
+          <div class="field full"><label for="docDetails">Details <span class="h">(amounts, dates, scope — anything specific)</span></label><textarea id="docDetails" placeholder="e.g. $1,500 for a one-time deep clean, due net-15; protect our pricing and client list"></textarea></div>
+        </div>
+        <div class="form-foot">
+          <button type="submit" class="btn btn-primary" id="docBtn">Generate my document →</button>
+          <span class="priv">🔒 We don't store your answers.</span>
+        </div>
+        <div class="err" id="docErr"></div>
+      </form>
+      <div class="loading" id="docLoading"><div class="spinner"></div><p>Drafting your document…</p></div>
+    </div>
+    <div id="docResults"></div>
   </div>
 </section>
 
@@ -310,6 +349,40 @@ function render(d){
   $('results').style.display='block';
   $('results').scrollIntoView({behavior:'smooth'});
   primeAssistant(d);
+}
+
+// ---- Business Document Generator ----
+$('docForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const err=$('docErr'); err.style.display='none';
+  const payload={docType:$('docType').value,businessName:$('docBusiness').value.trim(),state:$('docState').value.trim(),party:$('docParty').value.trim(),details:$('docDetails').value.trim()};
+  if(!payload.businessName){ err.textContent='Add your business name to begin.'; err.style.display='block'; return; }
+  $('docForm').style.display='none'; $('docLoading').style.display='block'; $('docResults').style.display='none';
+  try{
+    const r=await fetch('/.netlify/functions/generate-document',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d=await r.json();
+    if(!d.ok) throw new Error(d.error||'Something went wrong.');
+    docRender(d);
+  }catch(ex){
+    $('docLoading').style.display='none'; $('docForm').style.display='block';
+    err.textContent=ex.message||'Could not generate your document. Please try again.'; err.style.display='block';
+  }
+});
+function docRender(d){
+  $('docLoading').style.display='none';
+  $('docResults').innerHTML=`
+    <div class="planhead">
+      <div><h2>${d.docLabel}</h2><p>For ${d.businessName}</p></div>
+      <span class="badge">${d.mode==='ai'?'AI-drafted':'Starter draft'}</span>
+    </div>
+    <div class="plan">${mdToHtml(d.document)}</div>
+    <div class="disc">${d.disclaimer}</div>
+    <div class="again">
+      <a class="btn btn-ghost" href="#" onclick="window.print();return false;">⎙ Save / print</a>
+      <a class="btn btn-ghost" href="#" onclick="location.reload();return false;">↺ New document</a>
+    </div>`;
+  $('docResults').style.display='block';
+  $('docResults').scrollIntoView({behavior:'smooth'});
 }
 // ---- AI Business Assistant ----
 function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
