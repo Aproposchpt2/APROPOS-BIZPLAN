@@ -26,7 +26,7 @@ exports.handler = async (event) => {
     updated_at: new Date().toISOString(),
   };
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/marketing_leads`, {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/marketing_leads?on_conflict=email`, {
       method: 'POST',
       headers: { apikey: SKEY, Authorization: `Bearer ${SKEY}`, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify(row),

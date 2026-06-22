@@ -81,7 +81,7 @@ exports.handler = async (event) => {
       const email = String((obj.customer_details && obj.customer_details.email) || obj.customer_email || '').toLowerCase();
       if (email) {
         // record the purchase; attach Stripe ids to an existing client if onboarding already ran
-        await supa('marketing_leads', {
+        await supa('marketing_leads?on_conflict=email', {
           method: 'POST',
           headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
           body: JSON.stringify({ email, status: 'purchased', stripe_customer_id: obj.customer || null, stripe_subscription_id: obj.subscription || null, updated_at: new Date().toISOString() }),
