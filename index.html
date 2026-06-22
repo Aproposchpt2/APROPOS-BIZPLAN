@@ -7,7 +7,7 @@
 <meta name="description" content="An online full-service business center that does the work with you: a tailored business plan, a 24/7 AI business assistant, your brand & website, and help winning customers and contracts — all in one place. Start free.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,500&family=Cormorant:ital,wght@1,500;1,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --ink:#10241c; --ink-2:#3c5249; --line:#e3ddcf; --line-2:#efe9dc;
@@ -151,19 +151,64 @@
   </div>
 </header>
 
-<section class="hero">
-  <div class="wrap">
-    <span class="kick"><span class="d"></span>An Online Full-Service Business Center</span>
-    <h1 style="font-size:clamp(1.55rem,3.2vw,2.45rem);max-width:900px;margin-left:auto;margin-right:auto">What the government-funded business development centers DON'T do — <em>WE do.</em></h1>
-    <p class="lede">Business owners need more than advice. They need <em>tools, systems, guidance, and execution</em> — in one place. Start free; the full center is right here when you're ready to build, win, and grow.</p>
-    <div class="contrast">
-      <div class="them">The old way: sign up → sit through a seminar → a blank template</div>
-      <div class="us">Here: your plan, written for your business</div>
+<style>
+/* Platinum dual-column hero */
+.pl-hero{position:relative;overflow:hidden;font-family:'Jost',sans-serif;color:rgba(255,255,255,.72);
+  background:radial-gradient(900px 420px at 82% -8%,rgba(64,124,222,.22),transparent 70%),linear-gradient(180deg,#0F2A6A,#0b1f49);
+  padding:clamp(46px,7vw,92px) clamp(18px,4vw,48px)}
+.pl-hero::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.03;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:180px 180px}
+.pl-grid{position:relative;z-index:1;max-width:1160px;margin:0 auto;display:grid;grid-template-columns:1.3fr .9fr;gap:clamp(30px,4.5vw,64px);align-items:center}
+.pl-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:.64rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:7px 15px;margin-bottom:24px}
+.pl-eyebrow .dot{width:6px;height:6px;border-radius:50%;background:#c79a3e}
+.pl-h1{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;font-size:clamp(2.2rem,4.6vw,3.7rem);line-height:1.04;letter-spacing:-.01em;color:#fff;margin:0 0 20px}
+.pl-h1 em{font-style:italic;font-family:'Cormorant',Georgia,serif;color:#cfe0ff;font-weight:600}
+.pl-lede{font-size:clamp(1rem,1.5vw,1.18rem);line-height:1.72;color:rgba(255,255,255,.6);font-weight:300;max-width:580px;margin:0 0 32px}
+.pl-lede em{font-style:italic;color:rgba(255,255,255,.85)}
+.pl-cta{display:flex;gap:14px;flex-wrap:wrap}
+.pl-btn{display:inline-flex;align-items:center;justify-content:center;min-height:54px;padding:0 26px;text-transform:uppercase;letter-spacing:.14em;font-size:.75rem;font-weight:600;border-radius:4px;transition:transform .2s,background .25s,border-color .25s}
+.pl-btn-solid{background:#fff;color:#0F2A6A}
+.pl-btn-solid:hover{background:#eef3ff;transform:translateY(-2px)}
+.pl-btn-ghost{border:1px solid rgba(255,255,255,.3);color:#fff}
+.pl-btn-ghost:hover{border-color:#fff;transform:translateY(-2px)}
+.pl-card{position:relative;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:clamp(24px,3vw,34px);backdrop-filter:blur(6px)}
+.pl-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#cfe0ff,transparent)}
+.pl-card-eyebrow{font-size:.6rem;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:6px}
+.pl-card h3{font-family:'Bodoni Moda',Georgia,serif;font-weight:500;font-size:1.5rem;color:#fff;margin-bottom:20px;letter-spacing:-.01em}
+.pl-row{display:flex;gap:12px;padding:15px 0;border-top:1px solid rgba(255,255,255,.1)}
+.pl-tag{flex-shrink:0;align-self:flex-start;font-size:.58rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:5px 9px;border-radius:4px}
+.pl-them .pl-tag{background:rgba(255,255,255,.08);color:rgba(255,255,255,.5)}
+.pl-us .pl-tag{background:#fff;color:#0F2A6A}
+.pl-row p{font-size:.92rem;line-height:1.55}
+.pl-them p{color:rgba(255,255,255,.42)}
+.pl-us p{color:rgba(255,255,255,.82)}
+.pl-card-foot{margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.1);font-size:.82rem;letter-spacing:.03em;color:#cfe0ff}
+@media(max-width:860px){.pl-grid{grid-template-columns:1fr;gap:30px}.pl-card{order:2}}
+</style>
+<section class="pl-hero">
+  <div class="pl-grid">
+    <div class="pl-left">
+      <span class="pl-eyebrow"><span class="dot"></span>An Online Full-Service Business Center</span>
+      <h1 class="pl-h1">What the government-funded business development centers DON'T do — <em>WE do.</em></h1>
+      <p class="pl-lede">Business owners need more than advice. They need <em>tools, systems, guidance, and execution</em> — in one place. Start free; the full center is right here when you're ready to build, win, and grow.</p>
+      <div class="pl-cta">
+        <a href="#start" class="pl-btn pl-btn-solid">Build my business plan →</a>
+        <a href="#assistant" class="pl-btn pl-btn-ghost">Meet your AI assistant →</a>
+      </div>
     </div>
-    <div style="margin-top:26px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-      <a href="#start" class="btn btn-primary">Build my business plan →</a>
-      <a href="#assistant" class="btn btn-ghost">Meet your AI assistant →</a>
-    </div>
+    <aside class="pl-card">
+      <div class="pl-card-eyebrow">The difference</div>
+      <h3>Advice vs. done.</h3>
+      <div class="pl-row pl-them">
+        <span class="pl-tag">Them</span>
+        <p>Sign up → sit through a seminar → walk out with a blank template.</p>
+      </div>
+      <div class="pl-row pl-us">
+        <span class="pl-tag">Apropos</span>
+        <p>Your business plan — written for your business, today. Your documents, your marketing, your contracts — done with you.</p>
+      </div>
+      <div class="pl-card-foot">Start free. Build, win, and grow when you're ready.</div>
+    </aside>
   </div>
 </section>
 
