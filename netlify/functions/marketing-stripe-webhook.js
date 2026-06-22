@@ -8,8 +8,8 @@
 const crypto = require('crypto');
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || '';
-const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY_TEST || '';
-const WH_SECRET = process.env.MARKETING_STRIPE_WEBHOOK_SECRET || process.env.STRIPE_WEBHOOK_SECRET || '';
+const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY || process.env.STRIP_SECRET_KEY || process.env.STRIPE_SECRET_KEY_TEST || '';
+const WH_SECRET = process.env.MARKETING_STRIPE_WEBHOOK_SECRET || process.env.BIZ_CENTER_MARKETING_WEBHOOK || process.env.STRIPE_WEBHOOK_SECRET || '';
 
 const sbH = (extra = {}) => ({ apikey: SKEY, Authorization: `Bearer ${SKEY}`, 'Content-Type': 'application/json', ...extra });
 
