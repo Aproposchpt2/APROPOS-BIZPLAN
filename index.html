@@ -167,13 +167,14 @@
 .pl-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0;background:linear-gradient(90deg,var(--green),var(--gold))}
 .pl-card-eyebrow{font-size:.62rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
 .pl-card h3{font-family:var(--disp);font-weight:700;font-size:1.45rem;color:var(--ink);margin-bottom:18px;letter-spacing:-.01em}
-.pl-row{display:flex;gap:12px;padding:14px 0;border-top:1px solid var(--line)}
-.pl-tag{flex-shrink:0;align-self:flex-start;font-size:.58rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:5px 9px;border-radius:4px}
-.pl-them .pl-tag{background:var(--line-2);color:var(--ink-2)}
-.pl-us .pl-tag{background:var(--green);color:#fff}
-.pl-row p{font-size:.92rem;line-height:1.55}
-.pl-them p{color:#8a9a90}
-.pl-us p{color:var(--ink);font-weight:400}
+.pl-card-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px}
+.pl-free{flex-shrink:0;font-size:.56rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--green);background:var(--green-soft);border:1px solid #cfe3d6;padding:5px 10px;border-radius:999px}
+.pl-list{list-style:none;margin:16px 0 0;padding:0}
+.pl-list li{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-top:1px solid var(--line)}
+.pl-list li:first-child{border-top:none;padding-top:2px}
+.pl-chk{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font-size:.7rem;font-weight:700;margin-top:1px}
+.pl-list b{display:block;color:var(--ink);font-weight:600;font-size:.94rem;line-height:1.3}
+.pl-list .s{display:block;color:var(--ink-2);font-size:.8rem;line-height:1.4;margin-top:1px}
 .pl-card-foot{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:.82rem;color:var(--green);font-weight:600}
 @media(max-width:860px){.pl-grid{grid-template-columns:1fr;gap:28px}.pl-card{order:2}}
 </style>
@@ -189,17 +190,19 @@
       </div>
     </div>
     <aside class="pl-card">
-      <div class="pl-card-eyebrow">The difference</div>
-      <h3>Advice vs. done.</h3>
-      <div class="pl-row pl-them">
-        <span class="pl-tag">Them</span>
-        <p>Sign up → sit through a seminar → walk out with a blank template.</p>
+      <div class="pl-card-top">
+        <div class="pl-card-eyebrow">What you get</div>
+        <span class="pl-free">Free to start</span>
       </div>
-      <div class="pl-row pl-us">
-        <span class="pl-tag">Apropos</span>
-        <p>Your business plan — written for your business, today. Your documents, your marketing, your contracts — done with you.</p>
-      </div>
-      <div class="pl-card-foot">Start free. Build, win, and grow when you're ready.</div>
+      <h3>The work, done with you.</h3>
+      <ul class="pl-list">
+        <li><span class="pl-chk">✓</span><div><b>Your business plan</b><span class="s">Tailored and written for your business</span></div></li>
+        <li><span class="pl-chk">✓</span><div><b>Business documents</b><span class="s">NDAs, agreements, invoices — drafted for you</span></div></li>
+        <li><span class="pl-chk">✓</span><div><b>A 24/7 AI assistant</b><span class="s">Guidance that knows your business</span></div></li>
+        <li><span class="pl-chk">✓</span><div><b>Marketing on autopilot</b><span class="s">A professional post on your page every morning</span></div></li>
+        <li><span class="pl-chk">✓</span><div><b>Contracts, matched</b><span class="s">Government opportunities found for you</span></div></li>
+      </ul>
+      <div class="pl-card-foot">No seminars. No blank templates. Just deliverables.</div>
     </aside>
   </div>
 </section>
