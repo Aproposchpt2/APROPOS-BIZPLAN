@@ -1,12 +1,8 @@
-// Apropos Online SBDC — Tailored Business Plan generator (the opening play).
-// "We don't teach the class. We hand you the plan." Then → access to CapGen products.
-//
-// Works end-to-end today:
-//   - If ANTHROPIC_API_KEY is set, it writes a genuinely tailored plan with Claude.
-//   - If not, it returns a solid starter plan assembled from the owner's inputs,
-//     so the flow is functional immediately (add the key to turn on AI tailoring).
+// Apropos Business Center — Business Plan + Onboarding Diagnosis
+// Sprint 1: simple intake -> AI diagnosis -> plan -> dashboard recommendations.
 
-const MODEL = process.env.PLAN_MODEL || 'claude-sonnet-4-6';
+const OPENAI_MODEL = process.env.PLAN_MODEL || 'gpt-4o-mini';
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_PLAN_MODEL || process.env.PLAN_MODEL || 'claude-sonnet-4-6';
 
 const SECTIONS = [
   'Executive Summary',
@@ -21,105 +17,197 @@ const SECTIONS = [
   'Funding Needs',
 ];
 
+const SERVICE_LIBRARY = {
+  business_plan: { label: 'Business Plan', icon: '📄', href: '#results', blurb: 'Your tailored business plan and operating roadmap.' },
+  formation: { label: 'Business Formation Guidance', icon: '🏢', href: '#assistant', blurb: 'Registration, EIN, business bank account, and startup checklist guidance.' },
+  documents: { label: 'Business Documents', icon: '📑', href: '#documents', blurb: 'Generate NDAs, agreements, proposals, invoices, and other business documents.' },
+  website: { label: 'Website Design', icon: '🌐', href: 'https://ai4websitedesign.com', blurb: 'Move from idea to a live customer-facing website.' },
+  branding: { label: 'Branding', icon: '✨', href: 'https://ai4websitedesign.com', blurb: 'Clarify your offer, name, message, and visual presence.' },
+  marketing: { label: 'Marketing Agent', icon: '📣', href: 'https://ai4-product-purchasing.ai4businesses.org/marketing-agent-offer.html', blurb: 'Create consistent promotional content and customer outreach.' },
+  customers: { label: 'Getting Customers', icon: '🤝', href: '#assistant', blurb: 'Build your first customer acquisition plan and follow-up motion.' },
+  funding: { label: 'Funding Readiness', icon: '💵', href: '#assistant', blurb: 'Prepare your business for grants, loans, and funding applications.' },
+  contracts: { label: 'Contract Opportunity Center', icon: '🏛', href: 'https://nevadastategen.aproposgroupllc.com', blurb: 'Prepare for state and federal opportunity intelligence.' },
+  capability: { label: 'Capability Statement', icon: '🧾', href: 'https://ai4-product-purchasing.ai4businesses.org/capgen-offer.html', blurb: 'Build the profile government buyers and partners expect.' },
+  proposal: { label: 'Proposal Writing', icon: '📝', href: '#assistant', blurb: 'Turn opportunities into organized proposal responses.' },
+  automation: { label: 'Business Automation', icon: '⚙️', href: '#assistant', blurb: 'Identify repeatable tasks that can be systemized.' },
+  assistant: { label: 'AI Business Assistant', icon: '💬', href: '#assistant', blurb: 'Ask follow-up questions and get practical next-step guidance.' },
+};
+
 function clean(s, max = 600) { return String(s || '').trim().slice(0, max); }
+function arr(v) { return Array.isArray(v) ? v.map(x => clean(x, 80)).filter(Boolean) : []; }
 
 function intakeFrom(body) {
+  const city = clean(body.city, 80);
+  const state = clean(body.state, 80);
   return {
-    businessName: clean(body.businessName, 120) || 'Your Business',
-    ownerName: clean(body.ownerName, 120),
+    fullName: clean(body.fullName || body.ownerName, 120),
+    email: clean(body.email, 160),
+    phone: clean(body.phone, 60),
+    businessName: clean(body.businessName, 140) || 'Your Business',
     industry: clean(body.industry, 120),
-    location: clean(body.location, 120),
-    stage: clean(body.stage, 40) || 'idea',
-    idea: clean(body.idea, 1200),
-    target: clean(body.target, 600),
-    edge: clean(body.edge, 600),
-    goal: clean(body.goal, 600),
-    budget: clean(body.budget, 60),
+    city,
+    state,
+    location: clean(body.location, 160) || [city, state].filter(Boolean).join(', '),
+    businessStageInput: clean(body.businessStage || body.stage, 80) || 'not_sure',
+    businessStatus: arr(body.businessStatus),
+    servicesNeeded: arr(body.servicesNeeded),
+    otherNeeds: clean(body.otherNeeds || body.idea || body.goal, 1200),
+    targetCustomer: clean(body.targetCustomer || body.target, 700),
   };
 }
 
-function buildPrompt(i) {
-  return `You are a senior small-business advisor writing a clear, practical, ready-to-use business plan for a real entrepreneur. Write in plain, confident language a first-time owner can act on — no fluff, no filler, no "[insert here]" placeholders. Make reasonable, specific assumptions from what they gave you and state them.
+function inferPath(i) {
+  const statuses = new Set(i.businessStatus);
+  const needs = new Set(i.servicesNeeded);
+  const missing = [];
+  const recKeys = new Set(['business_plan', 'assistant']);
 
-ENTREPRENEUR INPUT
+  const noBasics = i.businessStageInput === 'idea' || i.businessStageInput === 'starting' || statuses.has('none');
+  const wantsContracts = i.businessStageInput === 'contracts' || needs.has('contracts') || needs.has('capability') || needs.has('proposal');
+  const wantsFunding = i.businessStageInput === 'funding' || needs.has('funding');
+  const wantsCustomers = i.businessStageInput === 'customers' || needs.has('marketing') || needs.has('customers');
+
+  if (!statuses.has('registered')) missing.push('Business Registration');
+  if (!statuses.has('ein')) missing.push('EIN');
+  if (!statuses.has('bank')) missing.push('Business Bank Account');
+  if (!statuses.has('website')) missing.push('Website');
+  if (!statuses.has('social')) missing.push('Social Media Presence');
+  if (!statuses.has('customers')) missing.push('Customer Acquisition System');
+  if (wantsContracts && !statuses.has('gov_regs')) missing.push('Government Registrations');
+  if (wantsContracts && !statuses.has('capability')) missing.push('Capability Statement');
+
+  if (noBasics) ['formation', 'documents'].forEach(k => recKeys.add(k));
+  if (!statuses.has('website') || needs.has('website')) recKeys.add('website');
+  if (needs.has('branding')) recKeys.add('branding');
+  if (wantsCustomers) ['marketing', 'customers'].forEach(k => recKeys.add(k));
+  if (wantsFunding) recKeys.add('funding');
+  if (wantsContracts) ['contracts', 'capability', 'proposal'].forEach(k => recKeys.add(k));
+  if (needs.has('automation')) recKeys.add('automation');
+  if (needs.has('documents')) recKeys.add('documents');
+
+  let businessStage = 'BUILD';
+  if (noBasics) businessStage = 'START';
+  if (wantsCustomers) businessStage = 'MARKET';
+  if (wantsContracts) businessStage = 'WIN CONTRACTS';
+  if (wantsFunding || i.businessStageInput === 'growing') businessStage = 'GROW';
+  if (i.businessStageInput === 'not_sure' && noBasics) businessStage = 'START';
+
+  const nextSteps = [
+    'Review and save your AI-generated business plan.',
+    missing.length ? `Start with the missing foundation item: ${missing[0]}.` : 'Choose the highest-priority service card in your dashboard.',
+    wantsContracts ? 'Prepare your capability profile before pursuing contract opportunities.' : 'Use the AI Business Assistant to turn this plan into a 7-day action list.',
+  ];
+
+  return { businessStage, missingItems: missing.slice(0, 8), recommendedServiceKeys: Array.from(recKeys).slice(0, 8), nextSteps };
+}
+
+function buildPlanPrompt(i, diagnosis) {
+  return `You are the AI Business Agent for Apropos Business Center, an online full-service business center. Write a practical business plan for the client and use the intake data to make smart assumptions.
+
+CLIENT INTAKE
+- Name: ${i.fullName || '(not provided)'}
+- Email: ${i.email || '(not provided)'}
+- Phone: ${i.phone || '(not provided)'}
 - Business name: ${i.businessName}
-- Owner: ${i.ownerName || '(not given)'}
-- Industry: ${i.industry || '(not given)'}
-- Location: ${i.location || '(not given)'}
-- Stage: ${i.stage}
-- What the business does: ${i.idea || '(not given)'}
-- Target customer: ${i.target || '(not given)'}
-- Their stated edge: ${i.edge || '(not given)'}
-- Their goal: ${i.goal || '(not given)'}
-- Startup budget: ${i.budget || '(not given)'}
+- Industry: ${i.industry || '(not provided)'}
+- Location: ${i.location || '(not provided)'}
+- Business stage selected: ${i.businessStageInput}
+- Business status checked: ${i.businessStatus.join(', ') || '(none)'}
+- Services requested: ${i.servicesNeeded.join(', ') || '(none)'}
+- Target customer: ${i.targetCustomer || '(not provided)'}
+- Other needs: ${i.otherNeeds || '(not provided)'}
+- Diagnosed path: ${diagnosis.businessStage}
+- Missing items: ${diagnosis.missingItems.join(', ') || 'None identified'}
 
 Write a tailored business plan with EXACTLY these sections, each as a "## " markdown heading, in this order:
 ${SECTIONS.map(s => '## ' + s).join('\n')}
 
 Rules:
-- 2-4 tight paragraphs or a short bullet list per section.
-- Be concrete to THIS business and location; use real, sensible numbers in the Financial Outline and Funding Needs (clearly framed as estimates).
-- In Marketing & Sales Strategy, recommend specific first moves (brand, website, content, local outreach) — these set up tools they can use next.
-- End with no commentary after the last section.`;
+- Plainspoken, specific, and action-oriented.
+- No placeholders unless truly unavoidable.
+- Include concrete first moves that connect to the Apropos Business Center services.
+- End after the Funding Needs section.`;
 }
 
-async function aiPlan(i) {
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
+async function openAiPlan(i, diagnosis) {
+  const r = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
     body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 3000,
-      messages: [{ role: 'user', content: buildPrompt(i) }],
+      model: OPENAI_MODEL,
+      temperature: 0.45,
+      max_tokens: 3200,
+      messages: [
+        { role: 'system', content: 'You write concise, practical small-business plans and recommendations.' },
+        { role: 'user', content: buildPlanPrompt(i, diagnosis) },
+      ],
     }),
   });
   const data = await r.json();
-  if (!r.ok) throw new Error(data?.error?.message || 'AI generation failed');
-  const text = (data.content || []).map(c => c.text || '').join('').trim();
-  if (!text) throw new Error('Empty AI response');
+  if (!r.ok) throw new Error(data?.error?.message || 'OpenAI plan generation failed');
+  const text = data?.choices?.[0]?.message?.content?.trim();
+  if (!text) throw new Error('Empty OpenAI response');
   return text;
 }
 
-// Keyless starter plan — still tailored to their inputs, so the flow works today.
-function starterPlan(i) {
-  const loc = i.location || 'your area';
+async function anthropicPlan(i, diagnosis) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: ANTHROPIC_MODEL, max_tokens: 3200, messages: [{ role: 'user', content: buildPlanPrompt(i, diagnosis) }] }),
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data?.error?.message || 'Anthropic plan generation failed');
+  const text = (data.content || []).map(c => c.text || '').join('').trim();
+  if (!text) throw new Error('Empty Anthropic response');
+  return text;
+}
+
+function starterPlan(i, diagnosis) {
   const ind = i.industry || 'your industry';
-  const tgt = i.target || 'your target customers';
-  const does = i.idea || 'what your business offers';
-  const edge = i.edge || 'the advantage that makes you the obvious choice';
+  const loc = i.location || 'your market';
+  const needs = i.servicesNeeded.join(', ') || 'business planning, organization, and next-step guidance';
   return `## Executive Summary
-${i.businessName} is a ${i.stage}-stage ${ind} business${i.location ? ' based in ' + i.location : ''}. ${does ? does + '. ' : ''}It serves ${tgt}, and competes by leading with ${edge}. ${i.goal ? 'The near-term goal: ' + i.goal + '.' : ''}
+${i.businessName} is positioned as a ${diagnosis.businessStage.toLowerCase()}-path business in ${ind}${loc ? ' serving ' + loc : ''}. The immediate priority is to organize the business foundation, clarify the offer, and use the Apropos Business Center to move from idea or scattered activity into a structured action plan.
 
 ## Company Overview
-${i.ownerName ? i.ownerName + ' founded ' + i.businessName : i.businessName + ' is being built'} to meet a clear need in ${loc}. Decide your legal structure (an LLC is the common first choice), register the business, and open a dedicated business bank account before your first sale.
+The business should operate with a clear legal and operational foundation: registration, EIN, business banking, basic documents, and a simple customer-facing presence. Missing items identified during intake should be handled first because they affect funding, marketing, and contract readiness.
 
 ## Products & Services
-List your 1–3 core offers, what each costs you to deliver, and what you'll charge. Start with the single offer your ${tgt} most want, prove it, then expand.
+The first offer should be simple, specific, and easy to explain. Focus on the service or product most likely to generate the first paying customers, then expand once demand is proven.
 
 ## Market & Target Customer
-Your customer: ${tgt}. Define where they already look for a solution (search, social, referrals, local foot traffic) — that's exactly where your first marketing goes.
+The target customer should be defined by need, location, urgency, and ability to pay. If the customer profile is unclear, the first marketing task is to identify who has the problem and where they already look for a solution.
 
 ## Competitive Edge
-Your edge: ${edge}. Make it the first thing every customer hears. If a competitor can copy it in a weekend, sharpen it until they can't.
+The business should lead with a clear promise, fast response, reliable execution, and a professional online presence. The edge must be easy for customers to understand in one sentence.
 
 ## Marketing & Sales Strategy
-First moves: (1) a memorable name and clean brand, (2) a simple website that turns visitors into inquiries, (3) consistent content where your customers already are, (4) local outreach and reviews. These are the exact pieces the CapGen tools can build for you next — so you launch in days, not months.
+Start with a website, a strong offer, consistent social content, direct outreach, and follow-up. The Marketing Agent and AI Business Assistant can turn this into weekly content and daily customer-facing actions.
 
 ## Operations
-Map the path from "customer says yes" to "customer is delighted": how the order comes in, who fulfills it, and how you follow up. Keep it simple enough to run yourself, documented enough to hand off later.
+Document how the business receives inquiries, quotes work, delivers service, collects payment, and follows up. Simple systems should be created before volume increases.
 
 ## Milestones & Roadmap
-30 days: brand, website, first 5 customers. 90 days: repeatable sales motion + first reviews. 6–12 months: steady pipeline and your first hire or first contract.
+First 7 days: complete missing foundation items and save this plan. First 30 days: launch website and marketing. First 90 days: build a repeatable customer acquisition process and prepare funding or contract materials if needed.
 
 ## Financial Outline
-Estimate startup costs${i.budget ? ' (you noted ~' + i.budget + ')' : ''}, monthly fixed costs, price per sale, and the number of sales needed to break even. Track every dollar from day one — banks and funders will ask.
+Track startup costs, monthly expenses, price per sale, expected sales volume, and break-even point. The first goal is not complexity; it is clarity around how many customers are needed to cover costs and create profit.
 
 ## Funding Needs
-If you need capital, size it to a specific use (equipment, inventory, marketing) with the return it produces. Options to line up: a business bank account and credit, small-business grants, and microloans — pursue these in parallel with launch.`;
+Funding should be tied to specific uses such as website launch, equipment, marketing, inventory, or working capital. Before applying, prepare documents, business plan, basic financial assumptions, and a clear use-of-funds statement.`;
+}
+
+async function sendWelcomeEmail(i, diagnosis) {
+  if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL || !i.email) return false;
+  const subject = 'Welcome to Apropos Business Center';
+  const body = `Your free 14-day access has started.\n\nBusiness: ${i.businessName}\nRecommended path: ${diagnosis.businessStage}\n\nYour AI-generated business plan and recommended services are ready in your Business Center dashboard.\n\nNext step: return to the dashboard and continue building your business.\n\nApropos Business Center`;
+  const r = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+    body: JSON.stringify({ from: process.env.RESEND_FROM_EMAIL, to: [i.email], subject, text: body }),
+  });
+  return r.ok;
 }
 
 exports.handler = async (event) => {
@@ -130,17 +218,27 @@ exports.handler = async (event) => {
   let body;
   try { body = JSON.parse(event.body || '{}'); } catch { return { statusCode: 400, headers, body: JSON.stringify({ error: 'Bad JSON' }) }; }
   const i = intakeFrom(body);
-  if (!i.idea && i.businessName === 'Your Business') {
-    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Tell us at least your business name and what it does.' }) };
+
+  if (!i.fullName || !i.email || !i.businessName || !i.industry || !i.city || !i.state) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Please complete the required contact and business fields.' }) };
   }
 
+  const diagnosis = inferPath(i);
   let plan, mode;
   try {
-    if (process.env.ANTHROPIC_API_KEY) { plan = await aiPlan(i); mode = 'ai'; }
-    else { plan = starterPlan(i); mode = 'starter'; }
+    if (process.env.OPENAI_API_KEY) { plan = await openAiPlan(i, diagnosis); mode = 'openai'; }
+    else if (process.env.ANTHROPIC_API_KEY) { plan = await anthropicPlan(i, diagnosis); mode = 'anthropic'; }
+    else { plan = starterPlan(i, diagnosis); mode = 'starter'; }
   } catch (e) {
-    plan = starterPlan(i); mode = 'starter-fallback';
+    plan = starterPlan(i, diagnosis); mode = 'starter-fallback';
   }
+
+  let emailSent = false;
+  try { emailSent = await sendWelcomeEmail(i, diagnosis); } catch (_) { emailSent = false; }
+
+  const recommendedServices = diagnosis.recommendedServiceKeys.map(key => ({ key, ...SERVICE_LIBRARY[key] })).filter(s => s.label);
+  const trialStart = new Date();
+  const trialEnd = new Date(trialStart.getTime() + 14 * 24 * 60 * 60 * 1000);
 
   return {
     statusCode: 200,
@@ -148,14 +246,16 @@ exports.handler = async (event) => {
     body: JSON.stringify({
       ok: true,
       mode,
+      emailSent,
       businessName: i.businessName,
+      fullName: i.fullName,
+      businessStage: diagnosis.businessStage,
+      missingItems: diagnosis.missingItems,
+      recommendedServices,
+      nextSteps: diagnosis.nextSteps,
+      trial: { day: 1, daysTotal: 14, start: trialStart.toISOString(), end: trialEnd.toISOString() },
       plan,
-      capgen: [
-        { key: 'website',  label: 'Build your website',        blurb: 'Turn the plan into a live site that brings in customers.', },
-        { key: 'brand',    label: 'Create your brand & content', blurb: 'Name, look, social posts, captions — done for you.', },
-        { key: 'proposal', label: 'Win contracts',              blurb: 'Find government opportunities and draft the bid.', },
-      ],
-      disclaimer: 'This plan is a tailored starting point, not financial or legal advice. Verify numbers and registrations for your state before relying on them.',
+      disclaimer: 'This plan and dashboard are AI-generated business guidance for planning purposes only. They are not legal, tax, financial, or accounting advice.',
     }),
   };
 };
