@@ -1,5 +1,5 @@
 // Apropos Business Center — Business Plan + Onboarding Diagnosis
-// Sprint 1: simple intake -> AI diagnosis -> plan -> dashboard recommendations.
+// Sprint 2: simple intake -> AI diagnosis -> plan -> dashboard recommendations -> Supabase record.
 
 const OPENAI_MODEL = process.env.PLAN_MODEL || 'gpt-4o-mini';
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_PLAN_MODEL || process.env.PLAN_MODEL || 'claude-sonnet-4-6';
@@ -41,7 +41,7 @@ function intakeFrom(body) {
   const state = clean(body.state, 80);
   return {
     fullName: clean(body.fullName || body.ownerName, 120),
-    email: clean(body.email, 160),
+    email: clean(body.email, 160).toLowerCase(),
     phone: clean(body.phone, 60),
     businessName: clean(body.businessName, 140) || 'Your Business',
     industry: clean(body.industry, 120),
@@ -166,7 +166,6 @@ async function anthropicPlan(i, diagnosis) {
 function starterPlan(i, diagnosis) {
   const ind = i.industry || 'your industry';
   const loc = i.location || 'your market';
-  const needs = i.servicesNeeded.join(', ') || 'business planning, organization, and next-step guidance';
   return `## Executive Summary
 ${i.businessName} is positioned as a ${diagnosis.businessStage.toLowerCase()}-path business in ${ind}${loc ? ' serving ' + loc : ''}. The immediate priority is to organize the business foundation, clarify the offer, and use the Apropos Business Center to move from idea or scattered activity into a structured action plan.
 
@@ -210,6 +209,54 @@ async function sendWelcomeEmail(i, diagnosis) {
   return r.ok;
 }
 
+async function saveIntakeRecord(i, diagnosis, recommendedServices, plan, mode, emailSent, trialStart, trialEnd) {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { saved: false, id: null, error: 'Supabase env not configured' };
+  }
+
+  const payload = {
+    full_name: i.fullName,
+    email: i.email,
+    phone: i.phone || null,
+    business_name: i.businessName,
+    industry: i.industry,
+    city: i.city,
+    state: i.state,
+    business_stage_input: i.businessStageInput,
+    business_status: i.businessStatus,
+    services_needed: i.servicesNeeded,
+    other_needs: i.otherNeeds || null,
+    target_customer: i.targetCustomer || null,
+    ai_mode: mode,
+    diagnosed_stage: diagnosis.businessStage,
+    missing_items: diagnosis.missingItems,
+    recommended_services: recommendedServices,
+    next_steps: diagnosis.nextSteps,
+    business_plan: plan,
+    trial_start: trialStart.toISOString(),
+    trial_end: trialEnd.toISOString(),
+    welcome_email_sent: emailSent,
+  };
+
+  const url = `${process.env.SUPABASE_URL.replace(/\/$/, '')}/rest/v1/abc_business_center_intakes`;
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: {
+      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+      'content-type': 'application/json',
+      prefer: 'return=representation',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await r.json().catch(() => null);
+  if (!r.ok) {
+    return { saved: false, id: null, error: data?.message || 'Supabase insert failed' };
+  }
+  return { saved: true, id: Array.isArray(data) ? data[0]?.id : data?.id, error: null };
+}
+
 exports.handler = async (event) => {
   const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers };
@@ -240,6 +287,13 @@ exports.handler = async (event) => {
   const trialStart = new Date();
   const trialEnd = new Date(trialStart.getTime() + 14 * 24 * 60 * 60 * 1000);
 
+  let supabaseRecord = { saved: false, id: null, error: null };
+  try {
+    supabaseRecord = await saveIntakeRecord(i, diagnosis, recommendedServices, plan, mode, emailSent, trialStart, trialEnd);
+  } catch (e) {
+    supabaseRecord = { saved: false, id: null, error: e.message || 'Supabase save failed' };
+  }
+
   return {
     statusCode: 200,
     headers,
@@ -247,6 +301,7 @@ exports.handler = async (event) => {
       ok: true,
       mode,
       emailSent,
+      supabaseRecord,
       businessName: i.businessName,
       fullName: i.fullName,
       businessStage: diagnosis.businessStage,
