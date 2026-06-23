@@ -1,5 +1,5 @@
-// Apropos Business Center — Business Plan + Onboarding Diagnosis
-// Sprint 2: simple intake -> AI diagnosis -> plan -> dashboard recommendations -> Supabase record.
+// Apropos Business Center — Entrepreneur OS onboarding engine
+// Intake -> AI diagnosis -> readiness score -> plan -> dashboard -> Supabase record.
 
 const OPENAI_MODEL = process.env.PLAN_MODEL || 'gpt-4o-mini';
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_PLAN_MODEL || process.env.PLAN_MODEL || 'claude-sonnet-4-6';
@@ -30,7 +30,7 @@ const SERVICE_LIBRARY = {
   capability: { label: 'Capability Statement', icon: '🧾', href: 'https://ai4-product-purchasing.ai4businesses.org/capgen-offer.html', blurb: 'Build the profile government buyers and partners expect.' },
   proposal: { label: 'Proposal Writing', icon: '📝', href: '#assistant', blurb: 'Turn opportunities into organized proposal responses.' },
   automation: { label: 'Business Automation', icon: '⚙️', href: '#assistant', blurb: 'Identify repeatable tasks that can be systemized.' },
-  assistant: { label: 'AI Business Assistant', icon: '💬', href: '#assistant', blurb: 'Ask follow-up questions and get practical next-step guidance.' },
+  assistant: { label: 'AI Business Advisor', icon: '💬', href: '#assistant', blurb: 'Ask follow-up questions and get practical next-step guidance.' },
 };
 
 function clean(s, max = 600) { return String(s || '').trim().slice(0, max); }
@@ -95,10 +95,71 @@ function inferPath(i) {
   const nextSteps = [
     'Review and save your AI-generated business plan.',
     missing.length ? `Start with the missing foundation item: ${missing[0]}.` : 'Choose the highest-priority service card in your dashboard.',
-    wantsContracts ? 'Prepare your capability profile before pursuing contract opportunities.' : 'Use the AI Business Assistant to turn this plan into a 7-day action list.',
+    wantsContracts ? 'Prepare your capability profile before pursuing contract opportunities.' : 'Use the AI Business Advisor to turn this plan into a 7-day action list.',
   ];
 
   return { businessStage, missingItems: missing.slice(0, 8), recommendedServiceKeys: Array.from(recKeys).slice(0, 8), nextSteps };
+}
+
+function readinessScore(i, diagnosis) {
+  const s = new Set(i.businessStatus);
+  const n = new Set(i.servicesNeeded);
+  const foundation = (s.has('registered') ? 10 : 0) + (s.has('ein') ? 10 : 0) + (s.has('bank') ? 10 : 0) + ((s.has('registered') && s.has('ein')) || n.has('documents') ? 10 : 0);
+  const marketing = (s.has('website') ? 10 : 0) + (s.has('social') ? 5 : 0) + (s.has('customers') ? 5 : 0);
+  const operations = (s.has('employees') ? 5 : 0) + (n.has('documents') || s.has('registered') ? 5 : 0) + (n.has('automation') ? 5 : 0);
+  const growth = (n.has('funding') ? 5 : 0) + (n.has('marketing') || n.has('customers') ? 5 : 0) + (i.businessStageInput === 'growing' || diagnosis.businessStage === 'GROW' ? 5 : 0);
+  const government = (s.has('gov_regs') ? 5 : 0) + (s.has('capability') ? 5 : 0);
+  const total = foundation + marketing + operations + growth + government;
+  let rating = 'Starting Point';
+  if (total >= 75) rating = 'Strong Foundation';
+  else if (total >= 50) rating = 'Building Momentum';
+  else if (total >= 25) rating = 'Early Foundation';
+  return {
+    total,
+    max: 100,
+    rating,
+    categories: [
+      { name: 'Foundation', score: foundation, max: 40 },
+      { name: 'Marketing', score: marketing, max: 20 },
+      { name: 'Operations', score: operations, max: 15 },
+      { name: 'Growth', score: growth, max: 15 },
+      { name: 'Government Readiness', score: government, max: 10 },
+    ],
+  };
+}
+
+function actionPlan(i, diagnosis) {
+  const wantsContracts = diagnosis.businessStage === 'WIN CONTRACTS';
+  const wantsFunding = diagnosis.businessStage === 'GROW' || i.servicesNeeded.includes('funding');
+  return [
+    { week: 'Week 1', title: 'Foundation', items: ['Review your Business Assessment Report.', 'Handle the first missing requirement.', 'Save your business plan and confirm your core offer.'] },
+    { week: 'Week 2', title: 'Brand & Website', items: ['Clarify your brand message.', 'Start your website or update the current site.', 'Create or refine social profiles.'] },
+    { week: 'Week 3', title: wantsContracts ? 'Capability & Opportunities' : 'Marketing & Customers', items: wantsContracts ? ['Prepare capability statement details.', 'Review registration requirements.', 'Explore state or federal opportunity paths.'] : ['Create first promotional messages.', 'Build a customer outreach list.', 'Use the Marketing Agent or AI Advisor for campaign ideas.'] },
+    { week: 'Week 4', title: wantsFunding ? 'Funding & Launch Readiness' : 'Launch & Optimization', items: wantsFunding ? ['Prepare use-of-funds notes.', 'Gather documents funders may request.', 'Review the first 30 days with your AI Business Advisor.'] : ['Launch or promote the first offer.', 'Collect feedback from prospects or customers.', 'Refine the next 30-day plan.'] },
+  ];
+}
+
+function journeyTimeline(i, diagnosis) {
+  const s = new Set(i.businessStatus);
+  const has = key => s.has(key);
+  return [
+    { label: 'Profile Created', status: 'complete' },
+    { label: 'Assessment Generated', status: 'complete' },
+    { label: 'Business Plan Generated', status: 'complete' },
+    { label: 'Business Registered', status: has('registered') ? 'complete' : 'pending' },
+    { label: 'Website Started', status: has('website') ? 'complete' : 'pending' },
+    { label: 'Marketing Activated', status: has('social') || has('customers') ? 'complete' : 'pending' },
+    { label: 'Funding Prepared', status: i.servicesNeeded.includes('funding') ? 'pending' : 'future' },
+    { label: 'Government Readiness Complete', status: has('gov_regs') && has('capability') ? 'complete' : (diagnosis.businessStage === 'WIN CONTRACTS' ? 'pending' : 'future') },
+  ];
+}
+
+function serviceTimeline(recommendedServices) {
+  const immediate = ['business_plan', 'formation', 'documents', 'website', 'branding', 'marketing', 'customers', 'assistant'];
+  return {
+    now: recommendedServices.filter(s => immediate.includes(s.key)).slice(0, 5),
+    later: recommendedServices.filter(s => !immediate.includes(s.key)).slice(0, 5),
+  };
 }
 
 function buildPlanPrompt(i, diagnosis) {
@@ -182,7 +243,7 @@ The target customer should be defined by need, location, urgency, and ability to
 The business should lead with a clear promise, fast response, reliable execution, and a professional online presence. The edge must be easy for customers to understand in one sentence.
 
 ## Marketing & Sales Strategy
-Start with a website, a strong offer, consistent social content, direct outreach, and follow-up. The Marketing Agent and AI Business Assistant can turn this into weekly content and daily customer-facing actions.
+Start with a website, a strong offer, consistent social content, direct outreach, and follow-up. The Marketing Agent and AI Business Advisor can turn this into weekly content and daily customer-facing actions.
 
 ## Operations
 Document how the business receives inquiries, quotes work, delivers service, collects payment, and follows up. Simple systems should be created before volume increases.
@@ -209,11 +270,8 @@ async function sendWelcomeEmail(i, diagnosis) {
   return r.ok;
 }
 
-async function saveIntakeRecord(i, diagnosis, recommendedServices, plan, mode, emailSent, trialStart, trialEnd) {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return { saved: false, id: null, error: 'Supabase env not configured' };
-  }
-
+async function saveIntakeRecord(i, diagnosis, recommendedServices, plan, mode, emailSent, trialStart, trialEnd, readiness, actionPlanData, journeyData) {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return { saved: false, id: null, error: 'Supabase env not configured' };
   const payload = {
     full_name: i.fullName,
     email: i.email,
@@ -237,7 +295,6 @@ async function saveIntakeRecord(i, diagnosis, recommendedServices, plan, mode, e
     trial_end: trialEnd.toISOString(),
     welcome_email_sent: emailSent,
   };
-
   const url = `${process.env.SUPABASE_URL.replace(/\/$/, '')}/rest/v1/abc_business_center_intakes`;
   const r = await fetch(url, {
     method: 'POST',
@@ -249,11 +306,8 @@ async function saveIntakeRecord(i, diagnosis, recommendedServices, plan, mode, e
     },
     body: JSON.stringify(payload),
   });
-
   const data = await r.json().catch(() => null);
-  if (!r.ok) {
-    return { saved: false, id: null, error: data?.message || 'Supabase insert failed' };
-  }
+  if (!r.ok) return { saved: false, id: null, error: data?.message || 'Supabase insert failed' };
   return { saved: true, id: Array.isArray(data) ? data[0]?.id : data?.id, error: null };
 }
 
@@ -265,7 +319,6 @@ exports.handler = async (event) => {
   let body;
   try { body = JSON.parse(event.body || '{}'); } catch { return { statusCode: 400, headers, body: JSON.stringify({ error: 'Bad JSON' }) }; }
   const i = intakeFrom(body);
-
   if (!i.fullName || !i.email || !i.businessName || !i.industry || !i.city || !i.state) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Please complete the required contact and business fields.' }) };
   }
@@ -276,9 +329,7 @@ exports.handler = async (event) => {
     if (process.env.OPENAI_API_KEY) { plan = await openAiPlan(i, diagnosis); mode = 'openai'; }
     else if (process.env.ANTHROPIC_API_KEY) { plan = await anthropicPlan(i, diagnosis); mode = 'anthropic'; }
     else { plan = starterPlan(i, diagnosis); mode = 'starter'; }
-  } catch (e) {
-    plan = starterPlan(i, diagnosis); mode = 'starter-fallback';
-  }
+  } catch (_) { plan = starterPlan(i, diagnosis); mode = 'starter-fallback'; }
 
   let emailSent = false;
   try { emailSent = await sendWelcomeEmail(i, diagnosis); } catch (_) { emailSent = false; }
@@ -286,31 +337,32 @@ exports.handler = async (event) => {
   const recommendedServices = diagnosis.recommendedServiceKeys.map(key => ({ key, ...SERVICE_LIBRARY[key] })).filter(s => s.label);
   const trialStart = new Date();
   const trialEnd = new Date(trialStart.getTime() + 14 * 24 * 60 * 60 * 1000);
+  const readiness = readinessScore(i, diagnosis);
+  const actionPlanData = actionPlan(i, diagnosis);
+  const journeyData = journeyTimeline(i, diagnosis);
+  const timeline = serviceTimeline(recommendedServices);
 
   let supabaseRecord = { saved: false, id: null, error: null };
-  try {
-    supabaseRecord = await saveIntakeRecord(i, diagnosis, recommendedServices, plan, mode, emailSent, trialStart, trialEnd);
-  } catch (e) {
-    supabaseRecord = { saved: false, id: null, error: e.message || 'Supabase save failed' };
-  }
+  try { supabaseRecord = await saveIntakeRecord(i, diagnosis, recommendedServices, plan, mode, emailSent, trialStart, trialEnd, readiness, actionPlanData, journeyData); }
+  catch (e) { supabaseRecord = { saved: false, id: null, error: e.message || 'Supabase save failed' }; }
 
-  return {
-    statusCode: 200,
-    headers,
-    body: JSON.stringify({
-      ok: true,
-      mode,
-      emailSent,
-      supabaseRecord,
-      businessName: i.businessName,
-      fullName: i.fullName,
-      businessStage: diagnosis.businessStage,
-      missingItems: diagnosis.missingItems,
-      recommendedServices,
-      nextSteps: diagnosis.nextSteps,
-      trial: { day: 1, daysTotal: 14, start: trialStart.toISOString(), end: trialEnd.toISOString() },
-      plan,
-      disclaimer: 'This plan and dashboard are AI-generated business guidance for planning purposes only. They are not legal, tax, financial, or accounting advice.',
-    }),
-  };
+  return { statusCode: 200, headers, body: JSON.stringify({
+    ok: true,
+    mode,
+    emailSent,
+    supabaseRecord,
+    businessName: i.businessName,
+    fullName: i.fullName,
+    businessStage: diagnosis.businessStage,
+    missingItems: diagnosis.missingItems,
+    recommendedServices,
+    nextSteps: diagnosis.nextSteps,
+    readiness,
+    actionPlan: actionPlanData,
+    journey: journeyData,
+    serviceTimeline: timeline,
+    trial: { day: 1, daysTotal: 14, start: trialStart.toISOString(), end: trialEnd.toISOString() },
+    plan,
+    disclaimer: 'This plan and dashboard are AI-generated business guidance for planning purposes only. They are not legal, tax, financial, or accounting advice.',
+  }) };
 };
