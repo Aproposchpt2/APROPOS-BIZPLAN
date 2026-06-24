@@ -258,14 +258,44 @@ Track startup costs, monthly expenses, price per sale, expected sales volume, an
 Funding should be tied to specific uses such as website launch, equipment, marketing, inventory, or working capital. Before applying, prepare documents, business plan, basic financial assumptions, and a clear use-of-funds statement.`;
 }
 
-async function sendWelcomeEmail(i, diagnosis) {
+async function sendWelcomeEmail(i, diagnosis, readiness, trialEnd) {
   if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL || !i.email) return false;
-  const subject = 'Welcome to Apropos Business Center';
-  const body = `Your free 14-day access has started.\n\nBusiness: ${i.businessName}\nRecommended path: ${diagnosis.businessStage}\n\nYour AI-generated business plan and recommended services are ready in your Business Center dashboard.\n\nNext step: return to the dashboard and continue building your business.\n\nApropos Business Center`;
+  const SITE = 'https://aibizcenter.aproposgroupllc.com';
+  const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const first = esc((i.fullName || '').split(' ')[0] || 'there');
+  const score = readiness && readiness.total != null ? readiness.total : '';
+  let endStr = ''; try { endStr = trialEnd.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }); } catch (_) { endStr = trialEnd.toISOString().slice(0, 10); }
+  const priorities = ((diagnosis.missingItems && diagnosis.missingItems.length ? diagnosis.missingItems : diagnosis.nextSteps) || []).slice(0, 3);
+  const priHtml = priorities.length
+    ? priorities.map((p, idx) => `<tr><td style="padding:6px 0;color:#10623f;font-weight:800;width:26px;vertical-align:top">${idx + 1}.</td><td style="padding:6px 0;color:#3c5249">${esc(p)}</td></tr>`).join('')
+    : `<tr><td colspan="2" style="padding:6px 0;color:#3c5249">No major gaps flagged — keep building with your advisor.</td></tr>`;
+  const subject = `Welcome to the Apropos Business Center, ${first}`;
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;padding:26px;color:#10241c">
+    <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#c79a3e;font-weight:700;margin-bottom:12px">Apropos Business Center&trade;</div>
+    <h1 style="font-family:Georgia,serif;font-size:24px;line-height:1.2;margin:0 0 6px">Welcome, ${first} — your assessment is ready.</h1>
+    <p style="font-size:15px;line-height:1.6;color:#3c5249;margin:0 0 18px">We've reviewed <b>${esc(i.businessName)}</b> and built your assessment, plan, and recommended path inside the Business Center.</p>
+    <table style="width:100%;border-collapse:collapse;margin:0 0 18px"><tr>
+      <td style="background:#e6f1ea;border:1px solid #cfe3d6;border-radius:12px;padding:16px;text-align:center;width:46%">
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:#3c5249;font-weight:700">Readiness Score</div>
+        <div style="font-family:Georgia,serif;font-size:34px;font-weight:800;color:#0a4a2f;line-height:1.1">${score}<span style="font-size:16px;color:#3c5249">/100</span></div>
+      </td>
+      <td style="width:8px"></td>
+      <td style="background:#fbf9f3;border:1px solid #e3ddcf;border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:#3c5249;font-weight:700">Recommended Path</div>
+        <div style="font-family:Georgia,serif;font-size:22px;font-weight:800;color:#10623f;line-height:1.2;margin-top:6px">${esc(diagnosis.businessStage)}</div>
+      </td>
+    </tr></table>
+    <div style="font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#7a8a82;font-weight:700;margin:0 0 6px">Your Top 3 Priorities</div>
+    <table style="width:100%;border-collapse:collapse;font-size:15px;margin:0 0 20px">${priHtml}</table>
+    <div style="background:#fff8e8;border:1px solid #ead3a0;border-radius:12px;padding:14px 16px;font-size:14px;color:#6f4d05;margin:0 0 20px">&#9203; <b>Your 14-day free access is active</b> and runs through <b>${endStr}</b>. Keep everything you build — cancel anytime.</div>
+    <a href="${SITE}/#assistant" style="display:inline-block;background:#10623f;color:#fff;text-decoration:none;font-weight:800;padding:14px 26px;border-radius:10px;margin:0 0 10px">Complete your profile with your advisor &rarr;</a>
+    <p style="font-size:13px;color:#7a8a82;margin:6px 0 0">Return to your dashboard anytime: <a href="${SITE}" style="color:#10623f">${SITE}</a></p>
+    <p style="font-size:12px;color:#9aa8a0;margin-top:22px">&copy; 2026 Apropos Group LLC &middot; APROPOS BUSINESS CENTER&trade; &middot; Entrepreneur OS&trade;</p>
+  </div>`;
   const r = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.RESEND_API_KEY}` },
-    body: JSON.stringify({ from: process.env.RESEND_FROM_EMAIL, to: [i.email], subject, text: body }),
+    body: JSON.stringify({ from: process.env.RESEND_FROM_EMAIL, to: [i.email], subject, html }),
   });
   return r.ok;
 }
@@ -365,9 +395,6 @@ exports.handler = async (event) => {
     else { plan = starterPlan(i, diagnosis); mode = 'starter'; }
   } catch (_) { plan = starterPlan(i, diagnosis); mode = 'starter-fallback'; }
 
-  let emailSent = false;
-  try { emailSent = await sendWelcomeEmail(i, diagnosis); } catch (_) { emailSent = false; }
-
   const recommendedServices = diagnosis.recommendedServiceKeys.map(key => ({ key, ...SERVICE_LIBRARY[key] })).filter(s => s.label);
   const trialStart = new Date();
   const trialEnd = new Date(trialStart.getTime() + 14 * 24 * 60 * 60 * 1000);
@@ -375,6 +402,9 @@ exports.handler = async (event) => {
   const actionPlanData = actionPlan(i, diagnosis);
   const journeyData = journeyTimeline(i, diagnosis);
   const timeline = serviceTimeline(recommendedServices);
+
+  let emailSent = false;
+  try { emailSent = await sendWelcomeEmail(i, diagnosis, readiness, trialEnd); } catch (_) { emailSent = false; }
 
   let supabaseRecord = { saved: false, id: null, error: null };
   try { supabaseRecord = await saveIntakeRecord(i, diagnosis, recommendedServices, plan, mode, emailSent, trialStart, trialEnd, readiness, actionPlanData, journeyData); }
