@@ -311,6 +311,40 @@ async function saveIntakeRecord(i, diagnosis, recommendedServices, plan, mode, e
   return { saved: true, id: Array.isArray(data) ? data[0]?.id : data?.id, error: null };
 }
 
+// The member record the subscription flow runs on (webhook, Day-12 email all match here).
+// New email → create with a fresh 14-day trial; existing email → refresh profile only,
+// preserving the member's trial dates + subscription/Stripe state.
+async function saveMember(i, diagnosis, readiness, trialStart, trialEnd) {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return { saved: false, error: 'Supabase env not configured' };
+  const base = `${process.env.SUPABASE_URL.replace(/\/$/, '')}/rest/v1/biz_center_members`;
+  const H = { apikey: process.env.SUPABASE_SERVICE_ROLE_KEY, authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`, 'content-type': 'application/json' };
+  const profile = {
+    full_name: i.fullName,
+    phone: i.phone || null,
+    business_name: i.businessName,
+    industry: i.industry,
+    city: i.city,
+    state: i.state,
+    business_stage: diagnosis.businessStage,
+    business_status: i.businessStatus,
+    services_needed: i.servicesNeeded,
+    other_needs: i.otherNeeds || null,
+    target_customer: i.targetCustomer || null,
+    readiness_score: readiness.total,
+    last_visit: new Date().toISOString(),
+  };
+  try {
+    const found = await fetch(`${base}?email=eq.${encodeURIComponent(i.email)}&select=id`, { headers: H }).then(r => r.json()).catch(() => []);
+    if (Array.isArray(found) && found.length) {
+      const r = await fetch(`${base}?email=eq.${encodeURIComponent(i.email)}`, { method: 'PATCH', headers: { ...H, prefer: 'return=minimal' }, body: JSON.stringify(profile) });
+      return { saved: r.ok, returning: true };
+    }
+    const insert = { ...profile, email: i.email, subscription_status: 'trial', trial_start: trialStart.toISOString(), trial_end: trialEnd.toISOString() };
+    const r = await fetch(base, { method: 'POST', headers: { ...H, prefer: 'return=minimal' }, body: JSON.stringify(insert) });
+    return { saved: r.ok, returning: false };
+  } catch (e) { return { saved: false, error: e.message || 'member save failed' }; }
+}
+
 exports.handler = async (event) => {
   const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers };
@@ -346,11 +380,17 @@ exports.handler = async (event) => {
   try { supabaseRecord = await saveIntakeRecord(i, diagnosis, recommendedServices, plan, mode, emailSent, trialStart, trialEnd, readiness, actionPlanData, journeyData); }
   catch (e) { supabaseRecord = { saved: false, id: null, error: e.message || 'Supabase save failed' }; }
 
+  // The membership record the subscription flow keys on (webhook + Day-12 email match here).
+  let memberRecord = { saved: false };
+  try { memberRecord = await saveMember(i, diagnosis, readiness, trialStart, trialEnd); }
+  catch (e) { memberRecord = { saved: false, error: e.message || 'member save failed' }; }
+
   return { statusCode: 200, headers, body: JSON.stringify({
     ok: true,
     mode,
     emailSent,
     supabaseRecord,
+    memberRecord,
     businessName: i.businessName,
     fullName: i.fullName,
     businessStage: diagnosis.businessStage,
