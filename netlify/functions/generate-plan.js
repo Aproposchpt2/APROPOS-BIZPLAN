@@ -1,4 +1,4 @@
-// Apropos Business Center — Entrepreneur OS onboarding engine
+// Apropos Business Center — AG ENGINEERING OS™ onboarding engine
 // Intake -> AI diagnosis -> readiness score -> plan -> dashboard -> Supabase record.
 
 const OPENAI_MODEL = process.env.PLAN_MODEL || 'gpt-4o-mini';
@@ -233,7 +233,7 @@ async function sendWelcomeEmail(i, diagnosis, readiness, trialEnd) {
     <div style="background:#fff8e8;border:1px solid #ead3a0;border-radius:12px;padding:14px 16px;font-size:14px;color:#6f4d05;margin:0 0 20px">&#9203; <b>Your 14-day free access is active</b> and runs through <b>${endStr}</b>. Keep everything you build — cancel anytime.</div>
     <a href="${SITE}/#assistant" style="display:inline-block;background:#10623f;color:#fff;text-decoration:none;font-weight:800;padding:14px 26px;border-radius:10px;margin:0 0 10px">Complete your profile with your advisor &rarr;</a>
     <p style="font-size:13px;color:#7a8a82;margin:6px 0 0">Return to your dashboard anytime: <a href="${SITE}" style="color:#10623f">${SITE}</a></p>
-    <p style="font-size:12px;color:#9aa8a0;margin-top:22px">&copy; 2026 Apropos Group LLC &middot; APROPOS BUSINESS CENTER&trade; &middot; Entrepreneur OS&trade;</p>
+    <p style="font-size:12px;color:#9aa8a0;margin-top:22px">&copy; 2026 Apropos Group LLC &middot; APROPOS BUSINESS CENTER&trade; &middot; AG ENGINEERING OS&trade;</p>
   </div>`;
   const r = await fetch('https://api.resend.com/emails', {
     method: 'POST',
