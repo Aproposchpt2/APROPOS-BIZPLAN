@@ -58,7 +58,7 @@ Use only ids from the room list above, at most 3, most relevant first. If you ar
 // ── Morgan department routing targets (Item 2) ──────────────────────────────
 // `primary` → render as the gold .btn-primary-style button. `blank` → open in a new tab.
 const DEPARTMENTS = {
-  'website-advisory': { label: 'Enter Website Design Advisory →',          href: 'https://ai4websitedesign.com',            primary: true, blank: true },
+  'website-advisory': { label: 'Enter Website Design Advisory →',          href: '/website-builder.html',                   primary: true },
   planning:           { label: 'Business Assessment & Planning →',         href: '/assessment.html' },
   proposals:          { label: 'Contract Proposal Writing (Coming Soon)',  href: '#' },
   marketing:          { label: 'Marketing & Promotions Advisory (Coming Soon)', href: '#' },
