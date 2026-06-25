@@ -194,9 +194,13 @@ exports.handler = async (event) => {
   const morganMode = body.stage === 1 || body.stage === 2 || body.stage === '1' || body.stage === '2';
   const context = String(body.context || '').slice(0, 6000);
   const catalog = morganMode ? DEPARTMENTS : CATALOG;
-  const system = morganMode
+  let system = morganMode
     ? morganSystem(body.stage, body.firstName, context)
     : (context ? `${SYSTEM}\n\nThe member is working on this business (use it to route and tailor your help):\n${context}` : SYSTEM);
+  // Item 4: a document shared from the Morgan chat — fold its text into the system prompt.
+  if (morganMode && body.document_context) {
+    system += `\n\nThe user has shared a document. Use its content to give more specific, tailored advice. Document content:\n${String(body.document_context).slice(0, 14000)}`;
+  }
 
   if (!process.env.ANTHROPIC_API_KEY) {
     if (morganMode) {

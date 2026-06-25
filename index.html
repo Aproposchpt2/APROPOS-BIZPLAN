@@ -67,10 +67,14 @@ html{scroll-padding-top:84px}
 .morgan-act:hover{background:var(--sapphire);color:#fff}
 .morgan-act.primary{background:var(--goldstd);border-color:var(--goldstd);color:var(--sapphire)}
 .morgan-act.primary:hover{background:transparent;color:var(--sapphire)}
-.morgan-form{display:flex;gap:10px}
-.morgan-form input{flex:1;font-family:var(--body);font-size:.95rem;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)}
-.morgan-form input:focus{outline:none;border-color:var(--sapphire)}
-@media(max-width:900px){.morgan-form{flex-direction:column}}
+.morgan-form{display:flex;gap:8px;align-items:center}
+.morgan-form input#morganInput{flex:1;min-width:0;font-family:var(--body);font-size:.95rem;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)}
+.morgan-form input#morganInput:focus{outline:none;border-color:var(--sapphire)}
+.morgan-clip{background:none;border:0;font-size:1.25rem;cursor:pointer;color:var(--goldstd);padding:2px 4px;line-height:1;transition:.2s;flex:0 0 auto}
+.morgan-clip:hover{color:var(--sapphire)}
+.morgan-doctag{display:inline-flex;align-items:center;gap:10px;background:#f2f5fc;border:1px solid var(--line);border-left:3px solid var(--goldstd);border-radius:9px;padding:7px 11px;font-size:.82rem;color:var(--sapphire);margin-bottom:10px;max-width:100%}
+.morgan-doctag .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px}
+.morgan-doctag .rm{background:none;border:0;color:#b23b3b;cursor:pointer;font-weight:800;font-size:.8rem;flex:0 0 auto}
 /* Settings menu (Item 3) — sapphire/gold */
 .nav-gear{background:none;border:0;font-size:1.18rem;cursor:pointer;color:var(--ink);line-height:1;padding:4px 2px;transition:.25s;margin-left:2px}
 .nav-gear:hover{color:var(--sapphire);transform:rotate(35deg)}
@@ -142,7 +146,8 @@ html{scroll-padding-top:84px}
   <div class="morgan-card">
     <div class="morgan-hd"><div class="morgan-av">M</div><div><div class="morgan-name">Morgan — Your Business Advisor</div><div class="morgan-status" id="morganStatus">Connecting…</div></div></div>
     <div class="morgan-chat" id="morganChat" aria-live="polite"></div>
-    <form class="morgan-form" id="morganForm"><input id="morganInput" placeholder="Type your message to Morgan…" autocomplete="off"><button class="btn-dept" type="submit">Send</button></form>
+    <div class="morgan-doctag" id="morganDocTag" style="display:none"><span class="nm" id="morganDocName"></span><button type="button" class="rm" id="morganDocRemove" aria-label="Remove document">✕ remove</button></div>
+    <form class="morgan-form" id="morganForm"><button type="button" class="morgan-clip" id="morganClip" aria-label="Attach a document" title="Attach a document (.pdf, .docx, .txt)">📎</button><input id="morganInput" placeholder="Type your message to Morgan…" autocomplete="off"><button class="btn-dept" type="submit">Send</button><input type="file" id="morganFile" accept=".pdf,.docx,.txt" hidden></form>
   </div>
 </div></section>
 
@@ -228,9 +233,29 @@ html{scroll-padding-top:84px}
   addMsg('bot',opener); convo.push({role:'assistant',content:opener});
   if(!who){ renderActions([{label:'Start Free Assessment →',href:'/assessment.html'},{label:'Returning Member Sign-In →',href:'/resume.html'}]); }
 
+  // Item 4: document attach (paperclip). .txt native; .pdf via pdf.js; .docx via mammoth (loaded on demand).
+  var pendingDoc=null;
+  var docTag=document.getElementById('morganDocTag'), docName=document.getElementById('morganDocName'), fileInput=document.getElementById('morganFile');
+  function clearDoc(){ pendingDoc=null; docTag.style.display='none'; docName.textContent=''; fileInput.value=''; }
+  function loadScript(src){ return new Promise(function(res,rej){ if(document.querySelector('script[src="'+src+'"]')){res();return;} var s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=function(){rej(new Error('load failed'));}; document.head.appendChild(s); }); }
+  function extractDoc(file){
+    var name=(file.name||'').toLowerCase();
+    if(name.endsWith('.txt')) return file.text();
+    if(name.endsWith('.pdf')) return loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js').then(function(){ window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; return file.arrayBuffer(); }).then(function(buf){ return window.pdfjsLib.getDocument({data:buf}).promise; }).then(function(pdf){ var chain=Promise.resolve(''); for(var i=1;i<=pdf.numPages;i++){ (function(n){ chain=chain.then(function(acc){ if(acc.length>18000)return acc; return pdf.getPage(n).then(function(pg){return pg.getTextContent();}).then(function(c){ return acc+c.items.map(function(it){return it.str;}).join(' ')+'\n'; }); }); })(i); } return chain; });
+    if(name.endsWith('.docx')) return loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js').then(function(){ return file.arrayBuffer(); }).then(function(buf){ return window.mammoth.extractRawText({arrayBuffer:buf}); }).then(function(r){ return (r&&r.value)||''; });
+    return Promise.reject(new Error('Unsupported file type'));
+  }
+  document.getElementById('morganClip').addEventListener('click',function(){ fileInput.click(); });
+  document.getElementById('morganDocRemove').addEventListener('click',clearDoc);
+  fileInput.addEventListener('change',function(){ var f=fileInput.files[0]; if(!f)return; if(f.size>5*1024*1024){ docName.textContent='File too large — 5MB max.'; docTag.style.display='inline-flex'; pendingDoc=null; return; } docName.textContent='Reading '+f.name+'…'; docTag.style.display='inline-flex'; extractDoc(f).then(function(text){ pendingDoc={name:f.name, text:String(text||'').replace(/\s+/g,' ').trim().slice(0,14000)}; docName.textContent='📄 '+f.name; }).catch(function(){ docName.textContent='Could not read '+f.name+' — try a .txt, .pdf, or .docx.'; pendingDoc=null; }); });
+
   var busy=false;
-  function send(text){ text=(text||'').trim(); if(!text||busy) return; busy=true; addMsg('user',text); convo.push({role:'user',content:text}); var typing=addMsg('bot','…');
-    fetch('/.netlify/functions/assistant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:convo,stage:stage,firstName:firstName,context:context,sessionId:sessionId,userEmail:userEmail})})
+  function send(text){ text=(text||'').trim(); if((!text&&!pendingDoc)||busy) return; if(!text&&pendingDoc) text="I've shared a document — please take a look."; busy=true;
+    var doc=pendingDoc; addMsg('user', text+(doc?'   📎 '+doc.name:'')); convo.push({role:'user',content:text}); var typing=addMsg('bot','…');
+    var payload={messages:convo,stage:stage,firstName:firstName,context:context,sessionId:sessionId,userEmail:userEmail};
+    if(doc){ payload.document_context="I've uploaded a document: "+doc.name+". Here is the content for your reference:\n\n"+doc.text; }
+    clearDoc();
+    fetch('/.netlify/functions/assistant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
       .then(function(r){return r.json();})
       .then(function(d){ var reply=(d&&d.reply)||'…'; typing.innerHTML=mdInline(reply); convo.push({role:'assistant',content:reply}); renderActions(d&&d.actions); })
       .catch(function(){ typing.textContent='Sorry — I had trouble responding. Please try again.'; })
