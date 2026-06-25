@@ -2,6 +2,7 @@
 // Business Center — member login: verify a sign-in code and return the saved profile so
 // the front-end can reload the dashboard / prime the AI advisor with the member's context.
 
+const { recommend } = require('./_recommend');
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || '';
 
@@ -22,7 +23,7 @@ exports.handler = async (event) => {
 
   const base = `${SUPABASE_URL.replace(/\/$/, '')}/rest/v1/biz_center_members`;
   try {
-    const sel = 'select=full_name,business_name,business_stage,readiness_score,services_needed,agent_context,subscription_status,trial_end,login_code,login_code_expires';
+    const sel = 'select=full_name,business_name,business_stage,readiness_score,business_status,services_needed,agent_context,subscription_status,trial_end,login_code,login_code_expires';
     const rows = await fetch(`${base}?email=eq.${encodeURIComponent(email)}&${sel}`, { headers: sbH() }).then(r => r.json()).catch(() => []);
     const m = Array.isArray(rows) && rows[0];
     if (!m || !m.login_code || m.login_code !== code) return j(401, { ok: false, error: 'Invalid or used code' });
@@ -31,12 +32,17 @@ exports.handler = async (event) => {
     // success: clear the code (one-time use), stamp the visit
     await fetch(`${base}?email=eq.${encodeURIComponent(email)}`, { method: 'PATCH', headers: { ...sbH(), Prefer: 'return=minimal' }, body: JSON.stringify({ login_code: null, login_code_expires: null, last_visit: new Date().toISOString() }) }).catch(() => {});
 
+    // Recompute the member's recommended next steps + reasons from their saved
+    // answers, so the Agent greets returning members with the same reasoned plan.
+    const rec = recommend({ businessStatus: m.business_status, servicesNeeded: m.services_needed, businessStageInput: m.business_stage });
+
     return j(200, { ok: true, member: {
       fullName: m.full_name,
       businessName: m.business_name,
-      businessStage: m.business_stage,
+      businessStage: m.business_stage || rec.businessStage,
       readinessScore: m.readiness_score,
       servicesNeeded: m.services_needed || [],
+      recommendedServices: rec.recommendedServices,
       agentContext: m.agent_context || '',
       subscriptionStatus: m.subscription_status,
       trialEnd: m.trial_end,

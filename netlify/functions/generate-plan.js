@@ -17,21 +17,9 @@ const SECTIONS = [
   'Funding Needs',
 ];
 
-const SERVICE_LIBRARY = {
-  business_plan: { label: 'Business Plan', icon: '📄', href: '#results', blurb: 'Your tailored business plan and operating roadmap.' },
-  formation: { label: 'Business Formation Guidance', icon: '🏢', href: '#assistant', blurb: 'Registration, EIN, business bank account, and startup checklist guidance.' },
-  documents: { label: 'Business Documents', icon: '📑', href: '#documents', blurb: 'Generate NDAs, agreements, proposals, invoices, and other business documents.' },
-  website: { label: 'Website Design', icon: '🌐', href: 'https://ai4websitedesign.com', blurb: 'Move from idea to a live customer-facing website.' },
-  branding: { label: 'Branding', icon: '✨', href: 'https://ai4websitedesign.com', blurb: 'Clarify your offer, name, message, and visual presence.' },
-  marketing: { label: 'Marketing Agent', icon: '📣', href: 'https://ai4-product-purchasing.ai4businesses.org/marketing-agent-offer.html', blurb: 'Create consistent promotional content and customer outreach.' },
-  customers: { label: 'Getting Customers', icon: '🤝', href: '#assistant', blurb: 'Build your first customer acquisition plan and follow-up motion.' },
-  funding: { label: 'Funding Readiness', icon: '💵', href: '#assistant', blurb: 'Prepare your business for grants, loans, and funding applications.' },
-  contracts: { label: 'Government Contracts', icon: '🏛', href: 'https://capgenmkt.aproposgroupllc.com', blurb: 'Federal contract intelligence via CapGen — plus Nevada & California state matching.' },
-  capability: { label: 'Capability Statement', icon: '🧾', href: 'https://capgenmkt.aproposgroupllc.com', blurb: 'Build the profile government buyers and partners expect.' },
-  proposal: { label: 'Proposal Writing', icon: '📝', href: '#assistant', blurb: 'Turn opportunities into organized proposal responses.' },
-  automation: { label: 'Business Automation', icon: '⚙️', href: '#assistant', blurb: 'Identify repeatable tasks that can be systemized.' },
-  assistant: { label: 'AI Business Advisor', icon: '💬', href: '#assistant', blurb: 'Ask follow-up questions and get practical next-step guidance.' },
-};
+// Shared recommendation + reason engine (also used by member-otp-verify so the
+// AI Agent greets fresh and returning members identically).
+const { recommend } = require('./_recommend');
 
 function clean(s, max = 600) { return String(s || '').trim().slice(0, max); }
 function arr(v) { return Array.isArray(v) ? v.map(x => clean(x, 80)).filter(Boolean) : []; }
@@ -54,51 +42,6 @@ function intakeFrom(body) {
     otherNeeds: clean(body.otherNeeds || body.idea || body.goal, 1200),
     targetCustomer: clean(body.targetCustomer || body.target, 700),
   };
-}
-
-function inferPath(i) {
-  const statuses = new Set(i.businessStatus);
-  const needs = new Set(i.servicesNeeded);
-  const missing = [];
-  const recKeys = new Set(['business_plan', 'assistant']);
-
-  const noBasics = i.businessStageInput === 'idea' || i.businessStageInput === 'starting' || statuses.has('none');
-  const wantsContracts = i.businessStageInput === 'contracts' || needs.has('contracts') || needs.has('capability') || needs.has('proposal');
-  const wantsFunding = i.businessStageInput === 'funding' || needs.has('funding');
-  const wantsCustomers = i.businessStageInput === 'customers' || needs.has('marketing') || needs.has('customers');
-
-  if (!statuses.has('registered')) missing.push('Business Registration');
-  if (!statuses.has('ein')) missing.push('EIN');
-  if (!statuses.has('bank')) missing.push('Business Bank Account');
-  if (!statuses.has('website')) missing.push('Website');
-  if (!statuses.has('social')) missing.push('Social Media Presence');
-  if (!statuses.has('customers')) missing.push('Customer Acquisition System');
-  if (wantsContracts && !statuses.has('gov_regs')) missing.push('Government Registrations');
-  if (wantsContracts && !statuses.has('capability')) missing.push('Capability Statement');
-
-  if (noBasics) ['formation', 'documents'].forEach(k => recKeys.add(k));
-  if (!statuses.has('website') || needs.has('website')) recKeys.add('website');
-  if (needs.has('branding')) recKeys.add('branding');
-  if (wantsCustomers) ['marketing', 'customers'].forEach(k => recKeys.add(k));
-  if (wantsFunding) recKeys.add('funding');
-  if (wantsContracts) ['contracts', 'capability', 'proposal'].forEach(k => recKeys.add(k));
-  if (needs.has('automation')) recKeys.add('automation');
-  if (needs.has('documents')) recKeys.add('documents');
-
-  let businessStage = 'BUILD';
-  if (noBasics) businessStage = 'START';
-  if (wantsCustomers) businessStage = 'MARKET';
-  if (wantsContracts) businessStage = 'WIN CONTRACTS';
-  if (wantsFunding || i.businessStageInput === 'growing') businessStage = 'GROW';
-  if (i.businessStageInput === 'not_sure' && noBasics) businessStage = 'START';
-
-  const nextSteps = [
-    'Review and save your AI-generated business plan.',
-    missing.length ? `Start with the missing foundation item: ${missing[0]}.` : 'Choose the highest-priority service card in your dashboard.',
-    wantsContracts ? 'Prepare your capability profile before pursuing contract opportunities.' : 'Use the AI Business Advisor to turn this plan into a 7-day action list.',
-  ];
-
-  return { businessStage, missingItems: missing.slice(0, 8), recommendedServiceKeys: Array.from(recKeys).slice(0, 8), nextSteps };
 }
 
 function readinessScore(i, diagnosis) {
@@ -387,7 +330,7 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Please complete the required contact and business fields.' }) };
   }
 
-  const diagnosis = inferPath(i);
+  const diagnosis = recommend({ businessStatus: i.businessStatus, servicesNeeded: i.servicesNeeded, businessStageInput: i.businessStageInput });
   let plan, mode;
   try {
     if (process.env.OPENAI_API_KEY) { plan = await openAiPlan(i, diagnosis); mode = 'openai'; }
@@ -395,7 +338,7 @@ exports.handler = async (event) => {
     else { plan = starterPlan(i, diagnosis); mode = 'starter'; }
   } catch (_) { plan = starterPlan(i, diagnosis); mode = 'starter-fallback'; }
 
-  const recommendedServices = diagnosis.recommendedServiceKeys.map(key => ({ key, ...SERVICE_LIBRARY[key] })).filter(s => s.label);
+  const recommendedServices = diagnosis.recommendedServices;
   const trialStart = new Date();
   const trialEnd = new Date(trialStart.getTime() + 14 * 24 * 60 * 60 * 1000);
   const readiness = readinessScore(i, diagnosis);
