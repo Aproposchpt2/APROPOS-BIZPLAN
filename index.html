@@ -17,10 +17,37 @@
 .hero-center .cta-row{justify-content:center}
 .hero-center h1{font-family:'Cinzel',serif;font-weight:600;letter-spacing:.045em;line-height:1.08;width:100%}
 .top .logo{font-family:'Cinzel',serif;font-weight:600;letter-spacing:.02em;font-size:1.04rem}
+
+/* ── Item 1: "Our Departments" nav dropdown + department directory (sapphire/gold house standard; existing green elements untouched) ── */
+:root{--sapphire:#0F2A6A;--goldstd:#C9A84C}
+/* Nav dropdown — NEW element added alongside existing nav links */
+.nav-dd{position:relative;display:inline-flex}
+.nav-dd-toggle{font-family:var(--body);font-size:.86rem;font-weight:800;color:#fff;background:var(--sapphire);border:1px solid var(--sapphire);border-radius:999px;padding:8px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;line-height:1}
+.nav-dd-toggle .car{font-size:.6rem;transition:transform .15s}
+.nav-dd.open .nav-dd-toggle .car{transform:rotate(180deg)}
+.nav-dd-menu{position:absolute;top:calc(100% + 10px);right:0;min-width:296px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 22px 56px rgba(15,42,106,.18);padding:8px;display:none;z-index:40}
+.nav-dd-menu a{display:block;font-size:.85rem;font-weight:700;color:var(--sapphire);text-decoration:none;padding:9px 12px;border-radius:9px;border-left:3px solid transparent}
+.nav-dd-menu a:hover{background:#f2f5fc;border-left-color:var(--goldstd)}
+.nav-dd.open .nav-dd-menu{display:block}
+@media(hover:hover) and (min-width:901px){.nav-dd:hover .nav-dd-menu{display:block}}
+@media(max-width:900px){.nav-dd{width:100%}.nav-dd-toggle{width:100%;justify-content:space-between}.nav-dd-menu{position:static;right:auto;min-width:0;width:100%;box-shadow:none;margin-top:6px}}
+/* Department directory — NEW section below hero */
+#departments .eyebrow{color:var(--sapphire)}
+#departments .dot{background:var(--goldstd)}
+.dept-dir-title{font-family:var(--disp);font-weight:700;font-size:clamp(1.5rem,3vw,2.1rem);letter-spacing:-.02em;color:var(--sapphire);margin:12px 0 6px}
+.dept-dir-sub{color:var(--ink2);max-width:660px;margin-bottom:4px}
+.dept-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:24px}
+.dept-card{display:flex;flex-direction:column;background:var(--sapphire);border:1px solid var(--sapphire);border-radius:16px;padding:24px;min-height:200px;scroll-margin-top:90px;box-shadow:0 18px 44px rgba(15,42,106,.10)}
+.dept-card h3{font-family:var(--disp);font-weight:700;font-size:1.2rem;line-height:1.18;color:var(--goldstd);margin-bottom:9px}
+.dept-card p{font-size:.9rem;line-height:1.55;color:rgba(255,255,255,.86);margin-bottom:18px;flex:1}
+.btn-dept{display:inline-flex;align-items:center;justify-content:center;gap:8px;align-self:flex-start;font-family:var(--body);font-weight:800;font-size:.92rem;border-radius:12px;padding:11px 20px;text-decoration:none;background:var(--goldstd);color:var(--sapphire);border:1.5px solid var(--goldstd);transition:.15s}
+.btn-dept:hover{background:transparent;color:var(--goldstd)}
+.btn-dept.muted{background:transparent;color:rgba(255,255,255,.5);border-color:rgba(255,255,255,.3);cursor:default;pointer-events:none}
+@media(max-width:900px){.dept-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<header class="top"><div class="wrap"><a class="logo" href="/index.html"><span class="mk">A</span>APROPOS BUSINESS CENTER™</a><nav class="nav"><a href="https://capgenmkt.aproposgroupllc.com" target="_blank" rel="noopener">Find Open Federal Government Contracts</a><a href="https://nevadastategen.aproposgroupllc.com" target="_blank" rel="noopener">Find Open Nevada State Government Contracts</a><a href="https://calstategen.aproposgroupllc.com" target="_blank" rel="noopener">Find Open California State Government Contracts</a><a href="/subscription.html">Pricing</a></nav></div></header>
+<header class="top"><div class="wrap"><a class="logo" href="/index.html"><span class="mk">A</span>APROPOS BUSINESS CENTER™</a><nav class="nav"><div class="nav-dd"><button type="button" class="nav-dd-toggle" aria-haspopup="true" aria-expanded="false">Our Departments <span class="car">▾</span></button><div class="nav-dd-menu"><a href="#dept-federal">Federal Contract Advisory</a><a href="#dept-nevada">Nevada State Contract Advisory</a><a href="#dept-california">California State Contract Advisory</a><a href="#dept-planning">Business Assessment &amp; Planning</a><a href="#dept-website">Website Design Advisory</a><a href="#dept-proposals">Contract Proposal Writing</a><a href="#dept-marketing">Marketing &amp; Promotions Advisory</a><a href="#dept-funding">Capital &amp; Funding Advisory</a><a href="#dept-registration">Business Registration Advisory</a></div></div><a href="https://capgenmkt.aproposgroupllc.com" target="_blank" rel="noopener">Find Open Federal Government Contracts</a><a href="https://nevadastategen.aproposgroupllc.com" target="_blank" rel="noopener">Find Open Nevada State Government Contracts</a><a href="https://calstategen.aproposgroupllc.com" target="_blank" rel="noopener">Find Open California State Government Contracts</a><a href="/subscription.html">Pricing</a></nav></div></header>
 
 <section class="hero">
   <div class="wrap hero-center">
@@ -31,6 +58,23 @@
     <div class="cta-row"><a href="/assessment.html" class="btn btn-primary">Start Free Trial →</a><a href="/resume.html" class="btn btn-ghost">Returning Member</a></div>
   </div>
 </section>
+
+<section class="section" id="departments"><div class="wrap">
+  <span class="eyebrow"><span class="dot"></span>Our Departments</span>
+  <h2 class="dept-dir-title">Nine departments. One business center.</h2>
+  <p class="dept-dir-sub">Step into any department to get the work done — not just advice. Each one is staffed by Apropos to move your business forward.</p>
+  <div class="dept-grid">
+    <div class="dept-card" id="dept-federal"><h3>Federal Contract Advisory</h3><p>Find open federal government contract opportunities matched to your business.</p><a class="btn-dept" href="https://capgen.aproposgroupllc.com" target="_blank" rel="noopener">Enter Department →</a></div>
+    <div class="dept-card" id="dept-nevada"><h3>Nevada State Contract Advisory</h3><p>Find open Nevada state government contract opportunities.</p><a class="btn-dept" href="https://nevadastategen.aproposgroupllc.com" target="_blank" rel="noopener">Enter Department →</a></div>
+    <div class="dept-card" id="dept-california"><h3>California State Contract Advisory</h3><p>Find open California state government contract opportunities.</p><a class="btn-dept" href="https://calstategen.aproposgroupllc.com" target="_blank" rel="noopener">Enter Department →</a></div>
+    <div class="dept-card" id="dept-planning"><h3>Business Assessment &amp; Planning</h3><p>Generate your AI-powered business plan from your assessment results.</p><a class="btn-dept" href="/assessment.html">Enter Department →</a></div>
+    <div class="dept-card" id="dept-website"><h3>Website Design Advisory</h3><p>Build your business website with an AI-powered design studio.</p><a class="btn-dept" href="https://ai4websitedesign.com" target="_blank" rel="noopener">Enter Department →</a></div>
+    <div class="dept-card" id="dept-proposals"><h3>Contract Proposal Writing</h3><p>Generate professional government contract proposals with AI assistance.</p><span class="btn-dept muted" aria-disabled="true">Coming Soon</span></div>
+    <div class="dept-card" id="dept-marketing"><h3>Marketing &amp; Promotions Advisory</h3><p>Automate your daily Facebook promotional content with AI.</p><span class="btn-dept muted" aria-disabled="true">Coming Soon</span></div>
+    <div class="dept-card" id="dept-funding"><h3>Capital &amp; Funding Advisory</h3><p>Identify funding sources, grants, and lenders matched to your business stage.</p><a class="btn-dept" href="#">Enter Department →</a></div>
+    <div class="dept-card" id="dept-registration"><h3>Business Registration Advisory</h3><p>Get step-by-step guidance on EIN, LLC formation, licensing, and state registration.</p><a class="btn-dept" href="#">Enter Department →</a></div>
+  </div>
+</div></section>
 
 <section class="expect"><div class="wrap"><div class="expect-card"><h2>What you'll receive</h2><p class="sub">Before you start, here is exactly what the Business Center will create for you.</p><div class="expect-grid"><div class="expect-item"><b>✓</b> Personalized Business Assessment</div><div class="expect-item"><b>✓</b> Business Readiness Score</div><div class="expect-item"><b>✓</b> Missing Requirements Checklist</div><div class="expect-item"><b>✓</b> First 30 Days Action Plan</div><div class="expect-item"><b>✓</b> Recommended Services</div><div class="expect-item"><b>✓</b> AI Business Coach</div><div class="expect-item"><b>✓</b> Business Plan</div><div class="expect-item"><b>✓</b> 14 Days Free Access</div></div></div></div></section>
 
@@ -49,6 +93,8 @@
 <script>
 // Post-checkout welcome banner (Stripe success redirect → /?subscribed=1).
 (function(){try{if(new URLSearchParams(location.search).get('subscribed')==='1'){var b=document.createElement('div');b.style.cssText='position:fixed;left:0;right:0;top:0;z-index:60;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;text-align:center;padding:14px 18px;font-weight:800;box-shadow:0 8px 24px rgba(16,36,28,.25)';b.innerHTML='🎉 Welcome — your APROPOS Business Center subscription is active. <a href="/resume.html" style="color:#fff;text-decoration:underline">Sign in to your Business Center →</a>';document.body.appendChild(b);document.body.style.paddingTop='54px';}}catch(e){}})();
+// "Our Departments" dropdown — click-toggle (touch/mobile friendly); desktop hover also opens via CSS.
+(function(){var dd=document.querySelector('.nav-dd');if(!dd)return;var t=dd.querySelector('.nav-dd-toggle');function close(){dd.classList.remove('open');t.setAttribute('aria-expanded','false');}t.addEventListener('click',function(e){e.stopPropagation();var open=dd.classList.toggle('open');t.setAttribute('aria-expanded',open?'true':'false');});dd.querySelectorAll('.nav-dd-menu a').forEach(function(a){a.addEventListener('click',close);});document.addEventListener('click',function(e){if(!dd.contains(e.target))close();});document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});})();
 // Desktop: fit the Cinzel wordmark to one dominant line. Mobile: keep the 2-line wrap.
 function fitHeadline(){var h=document.querySelector('.hero-center h1');if(!h)return;if(window.matchMedia('(max-width:759px)').matches){h.style.whiteSpace='normal';h.style.fontSize='';return;}h.style.whiteSpace='nowrap';h.style.fontSize='100px';var avail=h.clientWidth,w=h.scrollWidth||1,size=100*avail/w*0.985;size=Math.max(30,Math.min(size,90));h.style.fontSize=size+'px';}
 window.addEventListener('load',fitHeadline);window.addEventListener('resize',fitHeadline);if(document.fonts&&document.fonts.ready){document.fonts.ready.then(fitHeadline);}
