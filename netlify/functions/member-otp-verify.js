@@ -37,6 +37,7 @@ exports.handler = async (event) => {
     const rec = recommend({ businessStatus: m.business_status, servicesNeeded: m.services_needed, businessStageInput: m.business_stage });
 
     return j(200, { ok: true, member: {
+      email,
       fullName: m.full_name,
       businessName: m.business_name,
       businessStage: m.business_stage || rec.businessStage,

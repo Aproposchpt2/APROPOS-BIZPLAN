@@ -2,6 +2,10 @@
 // Receives intake data, generates Fortune-500-grade copy via Claude (claude-sonnet-4-6),
 // populates the approved flagship-template.html placeholders, and stores the build in
 // Supabase storage (bucket: website-builds). Buckets are self-provisioned on first run.
+//
+// TODO: gate behind member session before production hardening.
+// This endpoint is currently unauthenticated (matching the rest of the app's functions).
+// (Accepted as-is for now per directive; auth is a separate security directive.)
 
 const MODEL = process.env.WEBSITE_MODEL || 'claude-sonnet-4-6';
 const SUPA  = process.env.SUPABASE_URL;
