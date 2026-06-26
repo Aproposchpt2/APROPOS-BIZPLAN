@@ -35,6 +35,12 @@ function normalizeCode(value) {
   return clean(value, 80).toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
+function memberAccessCode(member) {
+  // login_code is the existing Business Center table column shown in Supabase.
+  // capgen_access_code is supported for forward compatibility with earlier build notes.
+  return normalizeCode(member.login_code || member.capgen_access_code || '');
+}
+
 function activeMember(member) {
   const status = String(member.subscription_status || '').toLowerCase();
   if (['active', 'trial', 'trialing', 'paid', 'comp'].includes(status)) return true;
@@ -59,7 +65,7 @@ exports.handler = async (event) => {
   }
   if (!accessCode) return json(400, { ok: false, error: 'Access code is required.' });
 
-  const select = 'id,email,full_name,business_name,industry,city,state,subscription_status,trial_end,capgen_access_code';
+  const select = 'id,email,full_name,business_name,industry,city,state,subscription_status,trial_end,login_code,capgen_access_code';
   const lookupUrl = `${SUPABASE_URL}/rest/v1/biz_center_members?email=eq.${encodeURIComponent(email)}&select=${encodeURIComponent(select)}`;
   const lookup = await fetch(lookupUrl, { headers: headers() });
   const members = await lookup.json().catch(() => []);
@@ -67,11 +73,11 @@ exports.handler = async (event) => {
   if (!lookup.ok) return json(500, { ok: false, error: members?.message || 'Could not verify member profile.' });
   if (!Array.isArray(members) || !members.length) return json(404, { ok: false, error: 'No Business Center member was found for that email.' });
 
-  const member = members.find(m => normalizeCode(m.capgen_access_code) === accessCode);
+  const member = members.find(m => memberAccessCode(m) === accessCode);
   if (!member) {
     return json(401, {
       ok: false,
-      error: `The access code does not match this member email. Found ${members.length} member record(s) for this email, but none contain that code.`,
+      error: `The access code does not match this member email. Found ${members.length} member record(s) for this email, but none contain that code in login_code or capgen_access_code.`,
     });
   }
 
@@ -109,6 +115,7 @@ exports.handler = async (event) => {
     activated: activationStored,
     activationWarning,
     matchedRecords: members.length,
+    codeColumnUsed: member.login_code ? 'login_code' : 'capgen_access_code',
     member: {
       id: member.id,
       email: member.email,
