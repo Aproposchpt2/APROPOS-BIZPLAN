@@ -1,0 +1,113 @@
+'use strict';
+
+// Business Center one-time activation
+// Verifies the welcome-email access code once, then marks the shared member profile activated.
+
+const DEFAULT_SUPABASE_URL = 'https://judislfknmhofcgzyozc.supabase.co';
+const SUPABASE_URL = (process.env.BC_SUPA_URL || process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/$/, '');
+const SERVICE_KEY = process.env.BC_SUPA_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || '';
+
+const CORS = {
+  'Content-Type': 'application/json',
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+function json(statusCode, body) {
+  return { statusCode, headers: CORS, body: JSON.stringify(body) };
+}
+
+function headers(extra = {}) {
+  return {
+    apikey: SERVICE_KEY,
+    authorization: `Bearer ${SERVICE_KEY}`,
+    'content-type': 'application/json',
+    ...extra,
+  };
+}
+
+function clean(value, max = 300) {
+  return String(value || '').trim().slice(0, max);
+}
+
+function activeMember(member) {
+  const status = String(member.subscription_status || '').toLowerCase();
+  if (['active', 'trial', 'trialing', 'paid', 'comp'].includes(status)) return true;
+  const trialEnd = member.trial_end ? Date.parse(member.trial_end) : 0;
+  return Number.isFinite(trialEnd) && trialEnd > Date.now();
+}
+
+exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: CORS, body: '' };
+  if (event.httpMethod !== 'POST') return json(405, { ok: false, error: 'POST only' });
+  if (!SERVICE_KEY) return json(500, { ok: false, error: 'Supabase service key is not configured.' });
+
+  let body;
+  try { body = JSON.parse(event.body || '{}'); }
+  catch { return json(400, { ok: false, error: 'Invalid JSON.' }); }
+
+  const email = clean(body.email, 180).toLowerCase();
+  const accessCode = clean(body.accessCode || body.code, 40).toUpperCase().replace(/\s+/g, '');
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return json(400, { ok: false, error: 'A valid email address is required.' });
+  }
+  if (!accessCode) return json(400, { ok: false, error: 'Access code is required.' });
+
+  const select = 'id,email,full_name,business_name,industry,city,state,subscription_status,trial_end,capgen_access_code';
+  const lookupUrl = `${SUPABASE_URL}/rest/v1/biz_center_members?email=eq.${encodeURIComponent(email)}&select=${encodeURIComponent(select)}&limit=1`;
+  const lookup = await fetch(lookupUrl, { headers: headers() });
+  const members = await lookup.json().catch(() => []);
+
+  if (!lookup.ok) return json(500, { ok: false, error: members?.message || 'Could not verify member profile.' });
+  if (!Array.isArray(members) || !members.length) return json(404, { ok: false, error: 'No Business Center member was found for that email.' });
+
+  const member = members[0];
+  const storedCode = clean(member.capgen_access_code, 40).toUpperCase().replace(/\s+/g, '');
+  if (!storedCode || storedCode !== accessCode) return json(401, { ok: false, error: 'The access code does not match this member email.' });
+  if (!activeMember(member)) return json(403, { ok: false, error: 'This Business Center membership is not active.' });
+
+  const activatedAt = new Date().toISOString();
+  let activationStored = false;
+  let activationWarning = null;
+
+  // Requires the columns in supabase/bc_activation_schema.sql.
+  const patchActivation = await fetch(`${SUPABASE_URL}/rest/v1/biz_center_members?email=eq.${encodeURIComponent(email)}`, {
+    method: 'PATCH',
+    headers: headers({ Prefer: 'return=minimal' }),
+    body: JSON.stringify({
+      bc_access_activated: true,
+      bc_access_activated_at: activatedAt,
+      last_visit: activatedAt,
+    }),
+  });
+
+  if (patchActivation.ok) {
+    activationStored = true;
+  } else {
+    const err = await patchActivation.json().catch(() => null);
+    activationWarning = err?.message || 'Activation flag was verified but could not be stored. Run the BC activation schema SQL.';
+    await fetch(`${SUPABASE_URL}/rest/v1/biz_center_members?email=eq.${encodeURIComponent(email)}`, {
+      method: 'PATCH',
+      headers: headers({ Prefer: 'return=minimal' }),
+      body: JSON.stringify({ last_visit: activatedAt }),
+    }).catch(() => null);
+  }
+
+  return json(200, {
+    ok: true,
+    activated: activationStored,
+    activationWarning,
+    member: {
+      id: member.id,
+      email: member.email,
+      fullName: member.full_name || '',
+      businessName: member.business_name || '',
+      industry: member.industry || '',
+      city: member.city || '',
+      state: member.state || '',
+      activatedAt,
+    },
+  });
+};
