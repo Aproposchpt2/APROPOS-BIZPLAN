@@ -201,7 +201,7 @@ Track startup costs, monthly expenses, price per sale, expected sales volume, an
 Funding should be tied to specific uses such as website launch, equipment, marketing, inventory, or working capital. Before applying, prepare documents, business plan, basic financial assumptions, and a clear use-of-funds statement.`;
 }
 
-async function sendWelcomeEmail(i, diagnosis, readiness, trialEnd) {
+async function sendWelcomeEmail(i, diagnosis, readiness, trialEnd, accessCode) {
   if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL || !i.email) return false;
   const SITE = 'https://aibizcenter.aproposgroupllc.com';
   const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
@@ -231,6 +231,7 @@ async function sendWelcomeEmail(i, diagnosis, readiness, trialEnd) {
     <div style="font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#7a8a82;font-weight:700;margin:0 0 6px">Your Top 3 Priorities</div>
     <table style="width:100%;border-collapse:collapse;font-size:15px;margin:0 0 20px">${priHtml}</table>
     <div style="background:#fff8e8;border:1px solid #ead3a0;border-radius:12px;padding:14px 16px;font-size:14px;color:#6f4d05;margin:0 0 20px">&#9203; <b>Your 14-day free access is active</b> and runs through <b>${endStr}</b>. Keep everything you build — cancel anytime.</div>
+    ${accessCode ? `<div style="background:#0F2A6A;border-radius:12px;padding:20px 24px;margin:24px 0;text-align:center"><p style="color:#C9A84C;font-size:13px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;margin:0 0 8px">Your CapGen Access Code</p><p style="color:#ffffff;font-size:32px;font-weight:900;letter-spacing:.2em;margin:0 0 8px">${accessCode}</p><p style="color:rgba(255,255,255,.7);font-size:12px;margin:0">Use this code to access your contract intelligence dashboard on all three CapGen platforms</p></div><p style="font-size:13px;color:#555;margin:16px 0 4px"><strong>Your contract intelligence platforms (included in your membership):</strong></p><p style="font-size:13px;color:#555;margin:4px 0">&bull; Federal: <a href="https://capgen.aproposgroupllc.com" style="color:#10623f">capgen.aproposgroupllc.com</a></p><p style="font-size:13px;color:#555;margin:4px 0">&bull; Nevada: <a href="https://nevadastategen.aproposgroupllc.com" style="color:#10623f">nevadastategen.aproposgroupllc.com</a></p><p style="font-size:13px;color:#555;margin:4px 0">&bull; California: <a href="https://calstategen.aproposgroupllc.com" style="color:#10623f">calstategen.aproposgroupllc.com</a></p>` : ''}
     <a href="${SITE}/#assistant" style="display:inline-block;background:#10623f;color:#fff;text-decoration:none;font-weight:800;padding:14px 26px;border-radius:10px;margin:0 0 10px">Complete your profile with your advisor &rarr;</a>
     <p style="font-size:13px;color:#7a8a82;margin:6px 0 0">Return to your dashboard anytime: <a href="${SITE}" style="color:#10623f">${SITE}</a></p>
     <p style="font-size:12px;color:#9aa8a0;margin-top:22px">&copy; 2026 Apropos Group LLC &middot; APROPOS BUSINESS CENTER&trade; &middot; AG ENGINEERING OS&trade;</p>
@@ -310,11 +311,22 @@ async function saveMember(i, diagnosis, readiness, trialStart, trialEnd) {
     const found = await fetch(`${base}?email=eq.${encodeURIComponent(i.email)}&select=id`, { headers: H }).then(r => r.json()).catch(() => []);
     if (Array.isArray(found) && found.length) {
       const r = await fetch(`${base}?email=eq.${encodeURIComponent(i.email)}`, { method: 'PATCH', headers: { ...H, prefer: 'return=minimal' }, body: JSON.stringify(profile) });
-      return { saved: r.ok, returning: true };
+      const memberData = await fetch(`${base}?email=eq.${encodeURIComponent(i.email)}&select=capgen_access_code`, { headers: H }).then(res => res.json()).catch(() => []);
+      let accessCode = memberData[0]?.capgen_access_code || null;
+      if (!accessCode) {
+        accessCode = Math.random().toString(36).substring(2, 6).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+        await fetch(`${base}?email=eq.${encodeURIComponent(i.email)}`, { method: 'PATCH', headers: { ...H, prefer: 'return=minimal' }, body: JSON.stringify({ capgen_access_code: accessCode }) });
+      }
+      return { saved: r.ok, returning: true, accessCode };
     }
     const insert = { ...profile, email: i.email, subscription_status: 'trial', trial_start: trialStart.toISOString(), trial_end: trialEnd.toISOString() };
     const r = await fetch(base, { method: 'POST', headers: { ...H, prefer: 'return=minimal' }, body: JSON.stringify(insert) });
-    return { saved: r.ok, returning: false };
+    let accessCode = null;
+    if (r.ok) {
+      accessCode = Math.random().toString(36).substring(2, 6).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+      await fetch(`${base}?email=eq.${encodeURIComponent(i.email)}`, { method: 'PATCH', headers: { ...H, prefer: 'return=minimal' }, body: JSON.stringify({ capgen_access_code: accessCode }) });
+    }
+    return { saved: r.ok, returning: false, accessCode };
   } catch (e) { return { saved: false, error: e.message || 'member save failed' }; }
 }
 
@@ -346,17 +358,17 @@ exports.handler = async (event) => {
   const journeyData = journeyTimeline(i, diagnosis);
   const timeline = serviceTimeline(recommendedServices);
 
+  // saveMember first so we have the access code for the welcome email
+  let memberRecord = { saved: false };
+  try { memberRecord = await saveMember(i, diagnosis, readiness, trialStart, trialEnd); }
+  catch (e) { memberRecord = { saved: false, error: e.message || 'member save failed' }; }
+
   let emailSent = false;
-  try { emailSent = await sendWelcomeEmail(i, diagnosis, readiness, trialEnd); } catch (_) { emailSent = false; }
+  try { emailSent = await sendWelcomeEmail(i, diagnosis, readiness, trialEnd, memberRecord.accessCode || null); } catch (_) { emailSent = false; }
 
   let supabaseRecord = { saved: false, id: null, error: null };
   try { supabaseRecord = await saveIntakeRecord(i, diagnosis, recommendedServices, plan, mode, emailSent, trialStart, trialEnd, readiness, actionPlanData, journeyData); }
   catch (e) { supabaseRecord = { saved: false, id: null, error: e.message || 'Supabase save failed' }; }
-
-  // The membership record the subscription flow keys on (webhook + Day-12 email match here).
-  let memberRecord = { saved: false };
-  try { memberRecord = await saveMember(i, diagnosis, readiness, trialStart, trialEnd); }
-  catch (e) { memberRecord = { saved: false, error: e.message || 'member save failed' }; }
 
   return { statusCode: 200, headers, body: JSON.stringify({
     ok: true,
@@ -364,6 +376,7 @@ exports.handler = async (event) => {
     emailSent,
     supabaseRecord,
     memberRecord,
+    capgenAccessCode: memberRecord.accessCode || null,
     businessName: i.businessName,
     fullName: i.fullName,
     businessStage: diagnosis.businessStage,
