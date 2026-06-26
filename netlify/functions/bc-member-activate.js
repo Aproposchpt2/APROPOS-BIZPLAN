@@ -31,6 +31,10 @@ function clean(value, max = 300) {
   return String(value || '').trim().slice(0, max);
 }
 
+function normalizeCode(value) {
+  return clean(value, 80).toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
 function activeMember(member) {
   const status = String(member.subscription_status || '').toLowerCase();
   if (['active', 'trial', 'trialing', 'paid', 'comp'].includes(status)) return true;
@@ -48,7 +52,7 @@ exports.handler = async (event) => {
   catch { return json(400, { ok: false, error: 'Invalid JSON.' }); }
 
   const email = clean(body.email, 180).toLowerCase();
-  const accessCode = clean(body.accessCode || body.code, 40).toUpperCase().replace(/\s+/g, '');
+  const accessCode = normalizeCode(body.accessCode || body.code);
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return json(400, { ok: false, error: 'A valid email address is required.' });
@@ -56,24 +60,29 @@ exports.handler = async (event) => {
   if (!accessCode) return json(400, { ok: false, error: 'Access code is required.' });
 
   const select = 'id,email,full_name,business_name,industry,city,state,subscription_status,trial_end,capgen_access_code';
-  const lookupUrl = `${SUPABASE_URL}/rest/v1/biz_center_members?email=eq.${encodeURIComponent(email)}&select=${encodeURIComponent(select)}&limit=1`;
+  const lookupUrl = `${SUPABASE_URL}/rest/v1/biz_center_members?email=eq.${encodeURIComponent(email)}&select=${encodeURIComponent(select)}`;
   const lookup = await fetch(lookupUrl, { headers: headers() });
   const members = await lookup.json().catch(() => []);
 
   if (!lookup.ok) return json(500, { ok: false, error: members?.message || 'Could not verify member profile.' });
   if (!Array.isArray(members) || !members.length) return json(404, { ok: false, error: 'No Business Center member was found for that email.' });
 
-  const member = members[0];
-  const storedCode = clean(member.capgen_access_code, 40).toUpperCase().replace(/\s+/g, '');
-  if (!storedCode || storedCode !== accessCode) return json(401, { ok: false, error: 'The access code does not match this member email.' });
+  const member = members.find(m => normalizeCode(m.capgen_access_code) === accessCode);
+  if (!member) {
+    return json(401, {
+      ok: false,
+      error: `The access code does not match this member email. Found ${members.length} member record(s) for this email, but none contain that code.`,
+    });
+  }
+
   if (!activeMember(member)) return json(403, { ok: false, error: 'This Business Center membership is not active.' });
 
   const activatedAt = new Date().toISOString();
   let activationStored = false;
   let activationWarning = null;
 
-  // Requires the columns in supabase/bc_activation_schema.sql.
-  const patchActivation = await fetch(`${SUPABASE_URL}/rest/v1/biz_center_members?email=eq.${encodeURIComponent(email)}`, {
+  // Activate only the row where email + code matched.
+  const patchActivation = await fetch(`${SUPABASE_URL}/rest/v1/biz_center_members?id=eq.${encodeURIComponent(member.id)}`, {
     method: 'PATCH',
     headers: headers({ Prefer: 'return=minimal' }),
     body: JSON.stringify({
@@ -88,7 +97,7 @@ exports.handler = async (event) => {
   } else {
     const err = await patchActivation.json().catch(() => null);
     activationWarning = err?.message || 'Activation flag was verified but could not be stored. Run the BC activation schema SQL.';
-    await fetch(`${SUPABASE_URL}/rest/v1/biz_center_members?email=eq.${encodeURIComponent(email)}`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/biz_center_members?id=eq.${encodeURIComponent(member.id)}`, {
       method: 'PATCH',
       headers: headers({ Prefer: 'return=minimal' }),
       body: JSON.stringify({ last_visit: activatedAt }),
@@ -99,6 +108,7 @@ exports.handler = async (event) => {
     ok: true,
     activated: activationStored,
     activationWarning,
+    matchedRecords: members.length,
     member: {
       id: member.id,
       email: member.email,
