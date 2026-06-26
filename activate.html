@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--sapphire:#0F2A6A;--gold:#C9A84C;--paper:#f6f7f3;--ink:#10241c;--muted:#65736c;--line:#d9e0da;--green:#10623f;--red:#b33b3b}
-*{box-sizing:border-box;margin:0;padding:0}body{min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at top,#fff 0,#f6f7f3 45%,#e8eee9 100%);font-family:Inter,Arial,sans-serif;color:var(--ink);padding:24px}.card{width:min(520px,100%);background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:0 26px 70px rgba(15,42,106,.16);overflow:hidden}.head{background:var(--sapphire);padding:28px 30px}.brand{font-family:Cinzel,Georgia,serif;color:#fff;font-size:1.05rem;letter-spacing:.06em;font-weight:600}.eyebrow{font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:800;margin-top:8px}.body{padding:30px}h1{font-family:Fraunces,Georgia,serif;color:var(--sapphire);font-size:clamp(1.8rem,4vw,2.35rem);line-height:1.05;margin-bottom:12px}.sub{color:var(--muted);font-size:.96rem;line-height:1.65;margin-bottom:22px}label{display:block;font-size:.68rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--sapphire);margin:0 0 7px}input{width:100%;font:600 1rem Inter,Arial,sans-serif;color:var(--sapphire);border:1px solid var(--line);border-radius:12px;padding:14px 15px;margin-bottom:15px;outline:none;background:#fbfcfb}input:focus{border-color:var(--sapphire);box-shadow:0 0 0 3px rgba(15,42,106,.08)}#accessCode{text-transform:uppercase;letter-spacing:.16em;text-align:center;font-size:1.14rem}.btn{width:100%;border:none;border-radius:999px;background:var(--gold);color:var(--sapphire);font-size:.82rem;font-weight:900;letter-spacing:.14em;text-transform:uppercase;padding:15px 20px;cursor:pointer}.btn:disabled{opacity:.65;cursor:wait}.msg{display:none;margin-top:16px;padding:13px 14px;border-radius:12px;font-size:.9rem;line-height:1.55}.msg.err{display:block;background:#fff4f4;color:var(--red);border:1px solid #f1c9c9}.msg.ok{display:block;background:#eef8f1;color:var(--green);border:1px solid #cce8d4}.links{margin-top:20px;border-top:1px solid var(--line);padding-top:18px;display:none;gap:10px;flex-direction:column}.links a{display:block;text-align:center;text-decoration:none;border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--sapphire);font-weight:800}.links a:hover{border-color:var(--gold);background:#fff9ea}.fine{font-size:.78rem;color:#8b9791;text-align:center;margin-top:18px;line-height:1.45}
+:root{--sapphire:#0F2A6A;--gold:#C9A84C;--paper:#f6f7f3;--ink:#10241c;--muted:#65736c;--line:#d9e0da;--green:#10623f;--red:#b33b3b;--blue:#0F2A6A}
+*{box-sizing:border-box;margin:0;padding:0}body{min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at top,#fff 0,#f6f7f3 45%,#e8eee9 100%);font-family:Inter,Arial,sans-serif;color:var(--ink);padding:24px}.card{width:min(520px,100%);background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:0 26px 70px rgba(15,42,106,.16);overflow:hidden}.head{background:var(--sapphire);padding:28px 30px}.brand{font-family:Cinzel,Georgia,serif;color:#fff;font-size:1.05rem;letter-spacing:.06em;font-weight:600}.eyebrow{font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:800;margin-top:8px}.body{padding:30px}h1{font-family:Fraunces,Georgia,serif;color:var(--sapphire);font-size:clamp(1.8rem,4vw,2.35rem);line-height:1.05;margin-bottom:12px}.sub{color:var(--muted);font-size:.96rem;line-height:1.65;margin-bottom:22px}label{display:block;font-size:.68rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--sapphire);margin:0 0 7px}input{width:100%;font:600 1rem Inter,Arial,sans-serif;color:var(--sapphire);border:1px solid var(--line);border-radius:12px;padding:14px 15px;margin-bottom:15px;outline:none;background:#fbfcfb}input:focus{border-color:var(--sapphire);box-shadow:0 0 0 3px rgba(15,42,106,.08)}#accessCode{text-transform:uppercase;letter-spacing:.16em;text-align:center;font-size:1.14rem}.btn{width:100%;border:none;border-radius:999px;background:var(--gold);color:var(--sapphire);font-size:.82rem;font-weight:900;letter-spacing:.14em;text-transform:uppercase;padding:15px 20px;cursor:pointer}.btn:disabled{opacity:.65;cursor:wait}.msg{display:none;margin-top:16px;padding:13px 14px;border-radius:12px;font-size:.9rem;line-height:1.55;word-break:break-word}.msg.err{display:block;background:#fff4f4;color:var(--red);border:1px solid #f1c9c9}.msg.ok{display:block;background:#eef8f1;color:var(--green);border:1px solid #cce8d4}.msg.info{display:block;background:#eef3ff;color:var(--blue);border:1px solid #c8d7ff}.links{margin-top:20px;border-top:1px solid var(--line);padding-top:18px;display:none;gap:10px;flex-direction:column}.links a{display:block;text-align:center;text-decoration:none;border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--sapphire);font-weight:800}.links a:hover{border-color:var(--gold);background:#fff9ea}.fine{font-size:.78rem;color:#8b9791;text-align:center;margin-top:18px;line-height:1.45}
 </style>
 </head>
 <body>
@@ -27,44 +27,86 @@
     <input id="email" type="email" autocomplete="email" placeholder="you@yourbusiness.com">
 
     <label for="accessCode">Access Code</label>
-    <input id="accessCode" type="text" maxlength="12" autocomplete="one-time-code" placeholder="ABC12345">
+    <input id="accessCode" type="text" maxlength="20" autocomplete="one-time-code" placeholder="ABC12345">
 
-    <button id="activateBtn" class="btn">Activate Access →</button>
+    <button id="activateBtn" type="button" class="btn" onclick="activateAccess()">Activate Access →</button>
     <div id="msg" class="msg"></div>
 
     <div id="links" class="links">
-      <a href="https://capgen.aproposgroupllc.com">Open Federal CapGen →</a>
-      <a href="https://nevadastategen.aproposgroupllc.com/login.html">Open NevadaStateGen →</a>
-      <a href="https://calstategen.aproposgroupllc.com/login.html">Open CalStateGen →</a>
+      <a href="https://capgen.aproposgroupllc.com/login.html">Open Federal CapGen Login →</a>
+      <a href="https://nevadastategen.aproposgroupllc.com/login.html">Open NevadaStateGen Login →</a>
+      <a href="https://calstategen.aproposgroupllc.com/login.html">Open CalStateGen Login →</a>
     </div>
     <div class="fine">Your business name is taken from the original AIBizCenter intake. The Gen sites create their own dashboard from that shared profile.</div>
   </div>
 </main>
 <script>
-'use strict';
-const $ = id => document.getElementById(id);
-$('accessCode').addEventListener('input', e => { e.target.value = e.target.value.toUpperCase().replace(/\s+/g,''); });
-async function activate(){
-  const email = $('email').value.trim().toLowerCase();
-  const accessCode = $('accessCode').value.trim().toUpperCase();
-  const msg = $('msg');
-  msg.className = 'msg'; msg.style.display = 'none'; msg.textContent = '';
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ msg.className='msg err'; msg.textContent='Please enter a valid email address.'; return; }
-  if(!accessCode){ msg.className='msg err'; msg.textContent='Please enter the access code from your welcome email.'; return; }
-  const btn = $('activateBtn'); btn.disabled = true; btn.textContent = 'Activating…';
-  try{
-    const res = await fetch('/.netlify/functions/bc-member-activate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,accessCode})});
-    const data = await res.json().catch(()=>({}));
-    if(!res.ok || !data.ok) throw new Error(data.error || 'Activation failed.');
-    msg.className='msg ok';
-    msg.innerHTML = 'Activated for <strong>' + (data.member?.businessName || 'your business') + '</strong>. From now on, use the email OTP login on each Gen site.' + (data.activationWarning ? '<br><br><strong>Admin note:</strong> ' + data.activationWarning : '');
-    $('links').style.display='flex';
-    btn.textContent = 'Access Activated';
-  }catch(e){ msg.className='msg err'; msg.textContent=e.message; btn.disabled=false; btn.textContent='Activate Access →'; }
-}
-$('activateBtn').addEventListener('click', activate);
-$('email').addEventListener('keydown', e => { if(e.key==='Enter') activate(); });
-$('accessCode').addEventListener('keydown', e => { if(e.key==='Enter') activate(); });
+(function(){
+  'use strict';
+  function byId(id){ return document.getElementById(id); }
+  function show(kind, text){
+    var msg = byId('msg');
+    msg.className = 'msg ' + kind;
+    msg.style.display = 'block';
+    msg.innerHTML = text;
+  }
+  function cleanCode(value){ return String(value || '').toUpperCase().replace(/\s+/g, ''); }
+
+  window.activateAccess = async function activateAccess(){
+    var emailEl = byId('email');
+    var codeEl = byId('accessCode');
+    var btn = byId('activateBtn');
+    var email = String(emailEl.value || '').trim().toLowerCase();
+    var accessCode = cleanCode(codeEl.value);
+    codeEl.value = accessCode;
+
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+      show('err', 'Please enter a valid email address.');
+      return;
+    }
+    if(!accessCode){
+      show('err', 'Please enter the access code from your welcome email.');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Activating…';
+    show('info', 'Contacting the Business Center activation function…');
+
+    try{
+      var res = await fetch('/.netlify/functions/bc-member-activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, accessCode: accessCode })
+      });
+      var raw = await res.text();
+      var data = {};
+      try { data = raw ? JSON.parse(raw) : {}; } catch(parseErr) {
+        throw new Error('The activation function returned a non-JSON response. HTTP ' + res.status + ': ' + raw.slice(0, 180));
+      }
+      if(!res.ok || !data.ok){
+        throw new Error(data.error || ('Activation failed. HTTP ' + res.status));
+      }
+
+      var businessName = data.member && data.member.businessName ? data.member.businessName : 'your business';
+      show('ok', 'Activated for <strong>' + businessName + '</strong>. From now on, use the email OTP login on each Gen site.' + (data.activationWarning ? '<br><br><strong>Admin note:</strong> ' + data.activationWarning : ''));
+      byId('links').style.display = 'flex';
+      btn.textContent = 'Access Activated';
+    } catch(e){
+      show('err', e.message || 'Activation failed.');
+      btn.disabled = false;
+      btn.textContent = 'Activate Access →';
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', function(){
+    var codeEl = byId('accessCode');
+    var emailEl = byId('email');
+    codeEl.addEventListener('input', function(){ this.value = cleanCode(this.value); });
+    codeEl.addEventListener('keydown', function(e){ if(e.key === 'Enter') window.activateAccess(); });
+    emailEl.addEventListener('keydown', function(e){ if(e.key === 'Enter') window.activateAccess(); });
+  });
+})();
 </script>
 </body>
 </html>
