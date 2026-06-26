@@ -1,6 +1,5 @@
 -- Business Center one-time activation support
--- Run this once in the Supabase SQL editor for the shared project:
--- https://judislfknmhofcgzyozc.supabase.co
+-- Run this once in the Supabase SQL editor for the shared Business Center project.
 
 alter table public.biz_center_members
   add column if not exists bc_access_activated boolean not null default false,
