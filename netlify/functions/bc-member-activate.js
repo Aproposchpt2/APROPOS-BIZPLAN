@@ -2,9 +2,9 @@
 
 // Business Center one-time activation
 // Verifies the welcome-email access code once, then marks the shared member profile activated.
+// Required Netlify env vars: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.
 
-const DEFAULT_SUPABASE_URL = 'https://judislfknmhofcgzyozc.supabase.co';
-const SUPABASE_URL = (process.env.BC_SUPA_URL || process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/$/, '');
+const SUPABASE_URL = (process.env.BC_SUPA_URL || process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SERVICE_KEY = process.env.BC_SUPA_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || '';
 
 const CORS = {
@@ -41,7 +41,7 @@ function activeMember(member) {
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: CORS, body: '' };
   if (event.httpMethod !== 'POST') return json(405, { ok: false, error: 'POST only' });
-  if (!SERVICE_KEY) return json(500, { ok: false, error: 'Supabase service key is not configured.' });
+  if (!SUPABASE_URL || !SERVICE_KEY) return json(500, { ok: false, error: 'Supabase environment variables are not configured.' });
 
   let body;
   try { body = JSON.parse(event.body || '{}'); }
