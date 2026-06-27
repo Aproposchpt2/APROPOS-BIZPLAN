@@ -31,19 +31,20 @@ function recommend(input) {
   const needs = new Set(arr(input.servicesNeeded));
   const stage = String(input.businessStageInput || input.businessStage || 'not_sure').toLowerCase();
 
+  const registrationExists = statuses.has('registered') || statuses.has('gov_regs');
   const noBasics = ['idea', 'starting', 'start'].includes(stage) || statuses.has('none');
   const wantsContracts = ['contracts', 'win contracts'].includes(stage) || needs.has('contracts') || needs.has('capability') || needs.has('proposal');
   const wantsFunding = ['funding', 'grow', 'growing'].includes(stage) || needs.has('funding');
   const wantsCustomers = ['customers', 'market'].includes(stage) || needs.has('marketing') || needs.has('customers');
 
   const missing = [];
-  if (!statuses.has('registered')) missing.push('Business Registration');
-  if (!statuses.has('ein')) missing.push('EIN');
+  if (!registrationExists) missing.push('Business Registration');
+  if (!registrationExists && !statuses.has('ein')) missing.push('EIN');
   if (!statuses.has('bank')) missing.push('Business Bank Account');
   if (!statuses.has('website')) missing.push('Website');
   if (!statuses.has('social')) missing.push('Social Media Presence');
   if (!statuses.has('customers')) missing.push('Customer Acquisition System');
-  if (wantsContracts && !statuses.has('gov_regs')) missing.push('Government Registrations');
+  if (wantsContracts && !registrationExists) missing.push('Government Registrations');
   if (wantsContracts && !statuses.has('capability')) missing.push('Capability Statement');
 
   // Ordered recommendations, each carrying the reason it was selected.
@@ -54,8 +55,8 @@ function recommend(input) {
   add('business_plan', 'Every path starts from your tailored business plan.');
   if (wantsCustomers) { add('marketing', 'Because your business needs stronger customer acquisition support.'); add('customers', 'Because you need a repeatable way to land your first or next customers.'); }
   if (wantsFunding) add('funding', 'Because you indicated funding is a current priority.');
-  if (wantsContracts) { add('contracts', 'Because government contract readiness is part of your growth path.'); add('capability', 'Because government buyers will expect a strong capability statement.'); add('proposal', 'Because winning contracts means responding with organized proposals.'); }
-  if (noBasics) { add('formation', "Because you're still standing up the basics of your business."); add('documents', "Because you'll need core business documents in place early."); }
+  if (wantsContracts) { add('contracts', registrationExists ? 'Because your existing registration can be used to open your contract intelligence dashboard.' : 'Because government contract readiness is part of your growth path.'); add('capability', 'Because government buyers will expect a strong capability statement.'); add('proposal', 'Because winning contracts means responding with organized proposals.'); }
+  if (noBasics && !registrationExists) { add('formation', "Because you're still standing up the basics of your business."); add('documents', "Because you'll need core business documents in place early."); }
   if (!statuses.has('website') || needs.has('website')) add('website', needs.has('website') ? 'Because you asked for help getting your website built.' : "Because you don't have a customer-facing website yet.");
   if (needs.has('branding')) add('branding', 'Because you asked for help clarifying your brand and message.');
   if (needs.has('automation')) add('automation', 'Because you want to automate repeatable tasks.');
@@ -65,16 +66,16 @@ function recommend(input) {
   const recommendedServices = rec.slice(0, 8).map(({ key, reason }) => ({ key, ...SERVICE_LIBRARY[key], reason }));
 
   let businessStage = 'BUILD';
-  if (noBasics) businessStage = 'START';
+  if (noBasics && !registrationExists) businessStage = 'START';
   if (wantsCustomers) businessStage = 'MARKET';
   if (wantsContracts) businessStage = 'WIN CONTRACTS';
   if (wantsFunding || stage === 'growing' || stage === 'grow') businessStage = 'GROW';
-  if (stage === 'not_sure' && noBasics) businessStage = 'START';
+  if (stage === 'not_sure' && noBasics && !registrationExists) businessStage = 'START';
 
   const nextSteps = [
     'Review and save your AI-generated business plan.',
     missing.length ? `Start with the missing foundation item: ${missing[0]}.` : 'Choose the highest-priority service card in your dashboard.',
-    wantsContracts ? 'Prepare your capability profile before pursuing contract opportunities.' : 'Use the AI Business Advisor to turn this plan into a 7-day action list.',
+    wantsContracts ? (registrationExists ? 'Use your Business Center access to review the CapGen-suite contract dashboards.' : 'Prepare your capability profile before pursuing contract opportunities.') : 'Use the AI Business Advisor to turn this plan into a 7-day action list.',
   ];
 
   return { businessStage, missingItems: missing.slice(0, 8), recommendedServices, nextSteps };
