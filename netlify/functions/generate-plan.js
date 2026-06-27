@@ -45,11 +45,13 @@ function intakeFrom(body) {
 function readinessScore(i, diagnosis) {
   const s = new Set(i.businessStatus);
   const n = new Set(i.servicesNeeded);
-  const foundation = (s.has('registered') ? 10 : 0) + (s.has('ein') ? 10 : 0) + (s.has('bank') ? 10 : 0) + ((s.has('registered') && s.has('ein')) || n.has('documents') ? 10 : 0);
+  const registrationExists = s.has('registered') || s.has('gov_regs');
+  const einCredit = registrationExists || s.has('ein');
+  const foundation = (registrationExists ? 10 : 0) + (einCredit ? 10 : 0) + (s.has('bank') ? 10 : 0) + ((registrationExists && einCredit) || n.has('documents') ? 10 : 0);
   const marketing = (s.has('website') ? 10 : 0) + (s.has('social') ? 5 : 0) + (s.has('customers') ? 5 : 0);
-  const operations = (s.has('employees') ? 5 : 0) + (n.has('documents') || s.has('registered') ? 5 : 0) + (n.has('automation') ? 5 : 0);
+  const operations = (s.has('employees') ? 5 : 0) + (n.has('documents') || registrationExists ? 5 : 0) + (n.has('automation') ? 5 : 0);
   const growth = (n.has('funding') ? 5 : 0) + (n.has('marketing') || n.has('customers') ? 5 : 0) + (i.businessStageInput === 'growing' || diagnosis.businessStage === 'GROW' ? 5 : 0);
-  const government = (s.has('gov_regs') ? 5 : 0) + (s.has('capability') ? 5 : 0);
+  const government = (registrationExists ? 5 : 0) + (s.has('capability') ? 5 : 0);
   const total = foundation + marketing + operations + growth + government;
   let rating = 'Starting Point';
   if (total >= 75) rating = 'Strong Foundation';
@@ -83,15 +85,16 @@ function actionPlan(i, diagnosis) {
 function journeyTimeline(i, diagnosis) {
   const s = new Set(i.businessStatus);
   const has = key => s.has(key);
+  const registrationExists = has('registered') || has('gov_regs');
   return [
     { label: 'Profile Created', status: 'complete' },
     { label: 'Assessment Generated', status: 'complete' },
     { label: 'Business Plan Generated', status: 'complete' },
-    { label: 'Business Registered', status: has('registered') ? 'complete' : 'pending' },
+    { label: 'Business Registered', status: registrationExists ? 'complete' : 'pending' },
     { label: 'Website Started', status: has('website') ? 'complete' : 'pending' },
     { label: 'Marketing Activated', status: has('social') || has('customers') ? 'complete' : 'pending' },
     { label: 'Funding Prepared', status: i.servicesNeeded.includes('funding') ? 'pending' : 'future' },
-    { label: 'Government Readiness Complete', status: has('gov_regs') && has('capability') ? 'complete' : (diagnosis.businessStage === 'WIN CONTRACTS' ? 'pending' : 'future') },
+    { label: 'Government Readiness Complete', status: registrationExists && has('capability') ? 'complete' : (diagnosis.businessStage === 'WIN CONTRACTS' ? 'pending' : 'future') },
   ];
 }
 
@@ -109,7 +112,7 @@ function truthyStatusValue(value) {
 
 function capgenAccessFromIntake(i) {
   const statuses = new Set((i.businessStatus || []).map(v => String(v || '').trim().toLowerCase()));
-  return statuses.has('registered') || statuses.has('gov_regs') || truthyStatusValue(statuses.has('registered')) || truthyStatusValue(statuses.has('gov_regs'));
+  return statuses.has('registered') || statuses.has('gov_regs');
 }
 
 function makeAccessCode() {
@@ -132,6 +135,7 @@ CLIENT INTAKE
 - Location: ${i.location || '(not provided)'}
 - Business stage selected: ${i.businessStageInput}
 - Business status checked: ${i.businessStatus.join(', ') || '(none)'}
+- Existing registration foundation: ${capgenAccessFromIntake(i) ? 'Yes — build forward from existing Federal registration or State licensed corporation status. Do not tell this client to get an EIN as an immediate priority.' : 'No registration foundation confirmed.'}
 - Services requested: ${i.servicesNeeded.join(', ') || '(none)'}
 - Target customer: ${i.targetCustomer || '(not provided)'}
 - Other needs: ${i.otherNeeds || '(not provided)'}
