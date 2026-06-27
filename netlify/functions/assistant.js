@@ -159,6 +159,21 @@ async function supa(path, opts = {}) {
   return text ? JSON.parse(text) : null;
 }
 
+function hasCapGenSignal(context) {
+  return /capgen_qualified\s*:\s*true|capgen_access\s*:\s*true|CapGen qualified\s*:\s*Yes/i.test(String(context || ''));
+}
+
+async function capgenContextForEmail(email) {
+  if (!SUPA || !SKEY || !email) return '';
+  try {
+    const rows = await supa(`biz_center_members?email=eq.${encodeURIComponent(String(email).toLowerCase())}&select=capgen_qualified&limit=1`);
+    const qualified = Array.isArray(rows) && rows.some(r => r && r.capgen_qualified === true);
+    return `CapGen qualified: ${qualified ? 'Yes — cover CapGen briefing' : 'No — do not mention CapGen'}`;
+  } catch (_) {
+    return '';
+  }
+}
+
 async function saveMorganSession({ sessionId, userEmail, stage, messages }) {
   if (!SUPA || !SKEY || !sessionId) return;
   const row = { id: sessionId, user_email: userEmail || null, stage: String(stage), messages, updated_at: new Date().toISOString() };
@@ -180,7 +195,12 @@ exports.handler = async (event) => {
   if (!messages.length) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Say something to your advisor.' }) };
 
   const morganMode = body.stage === 1 || body.stage === 2 || body.stage === '1' || body.stage === '2';
-  const context = String(body.context || '').slice(0, 6000);
+  let context = String(body.context || '').slice(0, 6000);
+  const stageNumber = Number(body.stage);
+  if (morganMode && stageNumber === 1 && !hasCapGenSignal(context)) {
+    const capgenLine = await capgenContextForEmail(body.userEmail);
+    if (capgenLine) context += `${context ? '\n' : ''}${capgenLine}`;
+  }
   const catalog = morganMode ? DEPARTMENTS : CATALOG;
   let system = morganMode ? morganSystem(body.stage, body.firstName, context) : (context ? `${SYSTEM}\n\nThe member is working on this business:\n${context}` : SYSTEM);
 
