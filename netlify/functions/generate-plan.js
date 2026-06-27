@@ -105,6 +105,23 @@ function serviceTimeline(recommendedServices) {
   };
 }
 
+function truthyStatusValue(value) {
+  return ['yes', 'true', 'checked', 'on', '1'].includes(String(value || '').trim().toLowerCase());
+}
+
+function capgenAccessFromIntake(i) {
+  const statuses = new Set((i.businessStatus || []).map(v => String(v || '').trim().toLowerCase()));
+  return statuses.has('registered') || statuses.has('gov_regs') || truthyStatusValue(statuses.has('registered')) || truthyStatusValue(statuses.has('gov_regs'));
+}
+
+function makeAccessCode() {
+  return Math.random().toString(36).substring(2, 6).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+}
+
+function firstAccessCode(row) {
+  return row?.login_code || row?.capgen_access_code || null;
+}
+
 function buildPlanPrompt(i, diagnosis) {
   return `You are the AI Business Agent for Apropos Business Center, an online full-service business center. Write a practical business plan for the client and use the intake data to make smart assumptions.
 
@@ -285,11 +302,45 @@ async function saveIntakeRecord(i, diagnosis, recommendedServices, plan, mode, e
   return { saved: true, id: Array.isArray(data) ? data[0]?.id : data?.id, error: null };
 }
 
+async function upsertCapGenProfile(i, H) {
+  const baseUrl = `${process.env.SUPABASE_URL.replace(/\/$/, '')}/rest/v1/capgen_bc_profiles`;
+  const payload = {
+    email: i.email,
+    full_name: i.fullName,
+    business_name: i.businessName,
+    industry: i.industry,
+    city: i.city,
+    state: i.state,
+    member_type: 'bc_member',
+    profile_complete: true,
+  };
+  const r = await fetch(baseUrl, {
+    method: 'POST',
+    headers: { ...H, Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(payload),
+  });
+  if (r.ok) return { saved: true, error: null };
+  const data = await r.json().catch(() => null);
+  return { saved: false, error: data?.message || 'capgen_bc_profiles upsert failed' };
+}
+
+async function markMemberCapGenQualified(base, H, memberId) {
+  const r = await fetch(`${base}?id=eq.${encodeURIComponent(memberId)}`, {
+    method: 'PATCH',
+    headers: { ...H, prefer: 'return=minimal' },
+    body: JSON.stringify({ capgen_qualified: true }),
+  });
+  if (r.ok) return { saved: true, error: null };
+  const data = await r.json().catch(() => null);
+  return { saved: false, error: data?.message || 'capgen_qualified update failed' };
+}
+
 // The member record the subscription flow runs on (webhook, Day-12 email all match here).
 // New email → create with a fresh 14-day trial; existing email → refresh profile only,
 // preserving the member's trial dates + subscription/Stripe state.
 async function saveMember(i, diagnosis, readiness, trialStart, trialEnd) {
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return { saved: false, error: 'Supabase env not configured' };
+  const capgenAccess = capgenAccessFromIntake(i);
   const base = `${process.env.SUPABASE_URL.replace(/\/$/, '')}/rest/v1/biz_center_members`;
   const H = { apikey: process.env.SUPABASE_SERVICE_ROLE_KEY, authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`, 'content-type': 'application/json' };
   const profile = {
@@ -307,27 +358,55 @@ async function saveMember(i, diagnosis, readiness, trialStart, trialEnd) {
     readiness_score: readiness.total,
     last_visit: new Date().toISOString(),
   };
+
   try {
-    const found = await fetch(`${base}?email=eq.${encodeURIComponent(i.email)}&select=id`, { headers: H }).then(r => r.json()).catch(() => []);
-    if (Array.isArray(found) && found.length) {
-      const r = await fetch(`${base}?email=eq.${encodeURIComponent(i.email)}`, { method: 'PATCH', headers: { ...H, prefer: 'return=minimal' }, body: JSON.stringify(profile) });
-      const memberData = await fetch(`${base}?email=eq.${encodeURIComponent(i.email)}&select=capgen_access_code`, { headers: H }).then(res => res.json()).catch(() => []);
-      let accessCode = memberData[0]?.capgen_access_code || null;
-      if (!accessCode) {
-        accessCode = Math.random().toString(36).substring(2, 6).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
-        await fetch(`${base}?email=eq.${encodeURIComponent(i.email)}`, { method: 'PATCH', headers: { ...H, prefer: 'return=minimal' }, body: JSON.stringify({ capgen_access_code: accessCode }) });
-      }
-      return { saved: r.ok, returning: true, accessCode };
-    }
-    const insert = { ...profile, email: i.email, subscription_status: 'trial', trial_start: trialStart.toISOString(), trial_end: trialEnd.toISOString() };
-    const r = await fetch(base, { method: 'POST', headers: { ...H, prefer: 'return=minimal' }, body: JSON.stringify(insert) });
+    const found = await fetch(`${base}?email=eq.${encodeURIComponent(i.email)}&select=id,login_code,capgen_access_code`, { headers: H }).then(r => r.json()).catch(() => []);
+    let saved = false;
+    let returning = false;
+    let memberId = null;
     let accessCode = null;
-    if (r.ok) {
-      accessCode = Math.random().toString(36).substring(2, 6).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
-      await fetch(`${base}?email=eq.${encodeURIComponent(i.email)}`, { method: 'PATCH', headers: { ...H, prefer: 'return=minimal' }, body: JSON.stringify({ capgen_access_code: accessCode }) });
+
+    if (Array.isArray(found) && found.length) {
+      returning = true;
+      memberId = found[0]?.id || null;
+      accessCode = capgenAccess ? firstAccessCode(found[0]) : null;
+      const r = await fetch(`${base}?email=eq.${encodeURIComponent(i.email)}`, { method: 'PATCH', headers: { ...H, prefer: 'return=minimal' }, body: JSON.stringify(profile) });
+      saved = r.ok;
+    } else {
+      const insert = { ...profile, email: i.email, subscription_status: 'trial', trial_start: trialStart.toISOString(), trial_end: trialEnd.toISOString() };
+      const r = await fetch(base, { method: 'POST', headers: { ...H, prefer: 'return=representation' }, body: JSON.stringify(insert) });
+      const inserted = await r.json().catch(() => []);
+      saved = r.ok;
+      memberId = Array.isArray(inserted) ? inserted[0]?.id : inserted?.id;
     }
-    return { saved: r.ok, returning: false, accessCode };
-  } catch (e) { return { saved: false, error: e.message || 'member save failed' }; }
+
+    if (capgenAccess && saved) {
+      if (!accessCode) {
+        accessCode = makeAccessCode();
+        await fetch(`${base}?email=eq.${encodeURIComponent(i.email)}`, { method: 'PATCH', headers: { ...H, prefer: 'return=minimal' }, body: JSON.stringify({ login_code: accessCode }) });
+      }
+
+      if (!memberId) {
+        const memberRows = await fetch(`${base}?email=eq.${encodeURIComponent(i.email)}&select=id`, { headers: H }).then(r => r.json()).catch(() => []);
+        memberId = Array.isArray(memberRows) ? memberRows[0]?.id : null;
+      }
+    }
+
+    const capgenQualifiedUpdate = capgenAccess && memberId ? await markMemberCapGenQualified(base, H, memberId) : { saved: false, error: null };
+    const capgenProfile = capgenAccess ? await upsertCapGenProfile(i, H) : { saved: false, error: null };
+
+    return {
+      saved,
+      returning,
+      accessCode: capgenAccess ? accessCode : null,
+      capgen_access: capgenAccess,
+      capgenAccess,
+      capgen_qualified: capgenAccess,
+      capgenQualified: capgenAccess,
+      capgenQualifiedUpdate,
+      capgenProfile,
+    };
+  } catch (e) { return { saved: false, error: e.message || 'member save failed', capgen_access: capgenAccess, capgenAccess, capgen_qualified: capgenAccess, capgenQualified: capgenAccess }; }
 }
 
 exports.handler = async (event) => {
@@ -359,9 +438,9 @@ exports.handler = async (event) => {
   const timeline = serviceTimeline(recommendedServices);
 
   // saveMember first so we have the access code for the welcome email
-  let memberRecord = { saved: false };
+  let memberRecord = { saved: false, capgen_access: false, capgenAccess: false, capgen_qualified: false, capgenQualified: false };
   try { memberRecord = await saveMember(i, diagnosis, readiness, trialStart, trialEnd); }
-  catch (e) { memberRecord = { saved: false, error: e.message || 'member save failed' }; }
+  catch (e) { memberRecord = { saved: false, error: e.message || 'member save failed', capgen_access: false, capgenAccess: false, capgen_qualified: false, capgenQualified: false }; }
 
   let emailSent = false;
   try { emailSent = await sendWelcomeEmail(i, diagnosis, readiness, trialEnd, memberRecord.accessCode || null); } catch (_) { emailSent = false; }
@@ -370,12 +449,18 @@ exports.handler = async (event) => {
   try { supabaseRecord = await saveIntakeRecord(i, diagnosis, recommendedServices, plan, mode, emailSent, trialStart, trialEnd, readiness, actionPlanData, journeyData); }
   catch (e) { supabaseRecord = { saved: false, id: null, error: e.message || 'Supabase save failed' }; }
 
+  const capgenAccess = !!memberRecord.capgenAccess;
+
   return { statusCode: 200, headers, body: JSON.stringify({
     ok: true,
     mode,
     emailSent,
     supabaseRecord,
     memberRecord,
+    capgenAccess,
+    capgen_access: capgenAccess,
+    capgenQualified: capgenAccess,
+    capgen_qualified: capgenAccess,
     capgenAccessCode: memberRecord.accessCode || null,
     businessName: i.businessName,
     fullName: i.fullName,
