@@ -1,0 +1,67 @@
+name: Fix Nevada Enterprise hero image
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/fix-nevada-enterprise-hero.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Copy hero image and fix homepage path
+        run: |
+          set -euo pipefail
+          mkdir -p assets
+          curl -fL "https://raw.githubusercontent.com/Aproposchpt2/CapGen-Govt-Search--Engine/main/headquarters.webp" -o assets/nevada-enterprise-hero.webp
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+
+          replacements = [
+              ('src="/APROPOS-BIZPLAN-main/assets/nevada-enterprise-hero.webp"', 'src="/assets/nevada-enterprise-hero.webp"'),
+              ("url('/APROPOS-BIZPLAN-main/assets/nevada-enterprise-hero.webp')", "url('/assets/nevada-enterprise-hero.webp')"),
+              ('url("/APROPOS-BIZPLAN-main/assets/nevada-enterprise-hero.webp")', 'url("/assets/nevada-enterprise-hero.webp")'),
+              ("url('/headquarters.webp')", "url('/assets/nevada-enterprise-hero.webp')"),
+              ('url("/headquarters.webp")', 'url("/assets/nevada-enterprise-hero.webp")'),
+          ]
+
+          changed = False
+          for old, new in replacements:
+              if old in text:
+                  text = text.replace(old, new, 1)
+                  changed = True
+
+          if not changed:
+              raise SystemExit('Expected hero image reference was not found in index.html')
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Remove one-time workflow
+        run: rm -f .github/workflows/fix-nevada-enterprise-hero.yml
+
+      - name: Commit requested fix
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html assets/nevada-enterprise-hero.webp .github/workflows/fix-nevada-enterprise-hero.yml
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Fix: hero image path — nevada-enterprise-hero.webp"
+          git push
